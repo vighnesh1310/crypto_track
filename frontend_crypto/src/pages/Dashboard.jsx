@@ -17,7 +17,7 @@ import { useSidebar } from '../context/SidebarContext';
 export function Dashboard() {
   const navigate = useNavigate();
   const { isOpen } = useSidebar();
-
+  
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) navigate('/login');
@@ -32,39 +32,37 @@ export function Dashboard() {
         }`}
       >
         <Topbar />
-
         <main className="p-4 sm:p-6 space-y-10">
           {/* Summary Cards */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
             <SummaryCards />
           </section>
 
-          {/* Wallet Overview + Trending Coins */}
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Wallet + Trending */}
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <WalletOverview />
             <TrendingCoins />
           </section>
 
           {/* Price Table + Portfolio Chart */}
-          <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div className="xl:col-span-2">
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
               <PriceTable />
             </div>
             <PortfolioChart />
           </section>
 
-          {/* Alerts Panel + Quick Trade */}
+          {/* Alerts + Quick Trade */}
           <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <AlertsPanel />
             <QuickTrade />
           </section>
 
-          {/* News Section */}
-          <section className="w-full">
+          {/* News */}
+          <section className="grid grid-cols-0 lg:grid-cols-0 gap-2">
             <NewsSection />
           </section>
         </main>
-
         <Footer />
       </div>
     </div>
