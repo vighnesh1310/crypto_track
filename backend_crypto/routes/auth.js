@@ -4,8 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// (Register part)
-
+// Register
 router.post('/register', async (req, res) => {
   const { name, email, password } = req.body;
 
@@ -14,17 +13,14 @@ router.post('/register', async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ error: 'User already exists' });
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     // Generate avatar
     const avatarUrl = `https://i.pravatar.cc/150?u=${email}`;
 
-    // Create user
+    // Create user (password hashing handled by UserSchema.pre('save'))
     const user = await User.create({
       name,
       email,
-      password: hashedPassword,
+      password, // Raw password, will be hashed by middleware
       avatarUrl,
     });
 
@@ -42,13 +38,12 @@ router.post('/register', async (req, res) => {
       },
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Registration error:', err); // Improved logging
+    res.status(500).json({ error: err.message || 'Server error' });
   }
 });
 
-
-// routes/auth.js (Login part)
+// Login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -72,9 +67,9 @@ router.post('/login', async (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    console.error('Login error:', err); // Improved logging
+    res.status(500).json({ error: err.message || 'Server error' });
   }
 });
-
 
 module.exports = router;
