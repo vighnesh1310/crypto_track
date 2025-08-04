@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   LineChart,
   Line,
@@ -6,30 +6,66 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  CartesianGrid
+  CartesianGrid,
 } from 'recharts';
-
-const generateMockData = (days) => {
-  return Array.from({ length: days }, (_, i) => ({
-    date: `Day ${i + 1}`,
-    value: Math.floor(1000 + Math.random() * 500)
-  }));
-};
+import API from '../utils/api';
+import { useCurrency } from '../context/CurrencyContext';
+import _ from 'lodash';
 
 export function PortfolioChart() {
   const [range, setRange] = useState('7D');
   const [chartData, setChartData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const { currency } = useCurrency();
 
-  useEffect(() => {
-    const days = range === '7D' ? 7 : range === '30D' ? 30 : 365;
-    setChartData(generateMockData(days));
+  const currencySymbols = {
+    usd: '$',
+    inr: '₹',
+    eur: '€',
+  };
+
+  const symbol = currencySymbols[currency?.toLowerCase()] || '$';
+
+  const debouncedSetRange = useCallback(
+    _.debounce((newRange) => setRange(newRange), 500),
+    []
+  );
+
+  const fetchChartData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token found');
+      const res = await API.get(`/portfolio/portfolio-history?range=${range}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const transformedData = res.data.map(item => ({
+        date: item.date || item.timestamp,
+        value: item.value || item.amount,
+      }));
+      setChartData(transformedData);
+      if (transformedData.length === 0) {
+        setError('No data available for the selected range');
+      }
+    } catch (error) {
+      console.error('Error fetching chart data:', error.response || error.message);
+      setError(`Failed to load chart data: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   }, [range]);
 
+  useEffect(() => {
+    fetchChartData();
+  }, [fetchChartData]);
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg transition-all duration-300">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">📊 Portfolio Chart</h3>
-        <div className="flex gap-2">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg transition-all duration-300" style={{ minHeight: '500px', width: '100%' }}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3 sm:gap-6">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white">📊 Portfolio Chart</h3>
+        <div className="flex gap-3 sm:gap-4">
           {['7D', '30D', '1Y'].map((label) => (
             <button
               key={label}
@@ -38,7 +74,7 @@ export function PortfolioChart() {
                   ? 'bg-indigo-600 text-white'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white border-gray-300 dark:border-gray-600'
               }`}
-              onClick={() => setRange(label)}
+              onClick={() => debouncedSetRange(label)}
             >
               {label}
             </button>
@@ -46,29 +82,46 @@ export function PortfolioChart() {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={220}>
-        <LineChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-          <XAxis dataKey="date" hide />
-          <YAxis hide />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: '#1f2937',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6
-            }}
-            labelStyle={{ color: '#ddd' }}
-          />
-          <Line
-            type="monotone"
-            dataKey="value"
-            stroke="#6366f1"
-            strokeWidth={3}
-            dot={false}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+      {loading ? (
+        <div className="text-center py-10 text-gray-500 dark:text-gray-400">Loading chart...</div>
+      ) : error ? (
+        <div className="text-center py-10 text-red-500 dark:text-red-400">{error}</div>
+      ) : chartData.length === 0 ? (
+        <div className="text-center py-10 text-gray-500 dark:text-gray-400">No data available for the selected range</div>
+      ) : (
+        <ResponsiveContainer width="100%" height={250}>
+          <LineChart data={chartData}>
+            <defs>
+              <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#6366f1" stopOpacity={0.6} />
+                <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} stroke="#cbd5e1" />
+            <XAxis dataKey="date" stroke="#8884d8" />
+            <YAxis stroke="#8884d8" tickFormatter={(value) => `${symbol}${value.toLocaleString()}`} />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#1f2937',
+                border: 'none',
+                borderRadius: 8,
+                color: '#fff',
+              }}
+              labelStyle={{ color: '#ddd' }}
+              formatter={(value) => `${symbol}${value.toLocaleString()}`}
+            />
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke="#6366f1"
+              strokeWidth={3}
+              dot={false}
+              fill="url(#colorValue)"
+              isAnimationActive={true}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
     </div>
   );
 }

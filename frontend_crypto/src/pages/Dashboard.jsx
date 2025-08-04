@@ -59,7 +59,7 @@ export function Dashboard() {
           </section>
 
           {/* News */}
-          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <section className="grid grid-cols-0 lg:grid-cols-0 gap-2">
             <NewsSection />
           </section>
         </main>

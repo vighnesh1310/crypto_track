@@ -1,9 +1,9 @@
-// ✅ Login.jsx (Enhanced with animation and modern styling)
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import API from '../utils/api';
 import { toast } from 'react-toastify';
+import { useUser } from '../context/UserContext';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -11,6 +11,12 @@ export function Login() {
   const [remember, setRemember] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { setUser } = useUser();
+
+  const from = location.state?.from || '/dashboard'; // redirect after login
 
   useEffect(() => {
     const savedEmail = localStorage.getItem('rememberedEmail');
@@ -22,14 +28,21 @@ export function Login() {
     setLoading(true);
     try {
       const res = await API.post('/auth/login', { email, password });
+
       localStorage.setItem('token', res.data.token);
-      remember
-        ? localStorage.setItem('rememberedEmail', email)
-        : localStorage.removeItem('rememberedEmail');
+      setUser(res.data.user); // ✅ update user context
+
+      if (remember) {
+        localStorage.setItem('rememberedEmail', email);
+      } else {
+        localStorage.removeItem('rememberedEmail');
+      }
+
       toast.success('✅ Login successful! Redirecting...');
-      setTimeout(() => (window.location.href = '/dashboard'), 1000);
+      navigate(from, { replace: true }); // ✅ redirect to original route
     } catch (err) {
-      toast.error(err.response?.data?.msg || 'Login failed');
+      console.error('Login error:', err.response);
+      toast.error(err.response?.data?.error || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }

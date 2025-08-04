@@ -1,13 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import { fetchMarketData } from '../utils/cryptoAPI';
+import { useCurrency } from '../context/CurrencyContext';
 
 export function PriceTable() {
   const [coins, setCoins] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const { currency } = useCurrency();
 
-  useEffect(() => {
-    fetchMarketData('usd', 10).then(data => setCoins(data));
-  }, []);
+  const currencySymbols = {
+    usd: '$',
+    inr: '₹',
+    eur: '€',
+    // You can add more here if needed (e.g., gbp: '£', jpy: '¥')
+  };
+
+  const symbol = currencySymbols[currency.toLowerCase()] || currency.toUpperCase();
+
+  const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  setLoading(true);
+  fetchMarketData(currency.toLowerCase(), 10).then(data => {
+    setCoins(data.slice(0, 10));
+    setLoading(false);
+  });
+}, [currency]);
+
+if (loading) return <div className="p-4 text-center">Loading market data...</div>;
+
 
   const filteredCoins = coins.filter((coin) =>
     coin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -44,11 +64,15 @@ export function PriceTable() {
                 <img src={coin.image} alt={coin.name} className="w-5 h-5" />
                 {coin.name} ({coin.symbol.toUpperCase()})
               </td>
-              <td>${coin.current_price.toLocaleString()}</td>
+              <td>
+                {symbol}{coin.current_price.toLocaleString()}
+              </td>
               <td className={coin.price_change_percentage_24h >= 0 ? 'text-green-500' : 'text-red-500'}>
                 {coin.price_change_percentage_24h?.toFixed(2)}%
               </td>
-              <td>${coin.market_cap.toLocaleString()}</td>
+              <td>
+                {symbol}{coin.market_cap.toLocaleString()}
+              </td>
             </tr>
           ))}
         </tbody>

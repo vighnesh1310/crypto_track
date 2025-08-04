@@ -11,18 +11,20 @@ import { Line } from 'react-chartjs-2';
 
 ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Tooltip);
 
-export function MiniSparkline({ data }) {
-  if (!data || data.length === 0) return <div className="text-xs text-gray-400">No chart</div>;
+export function MiniSparkline({ data = [] }) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return <div className="text-xs text-gray-400">No chart</div>;
+  }
 
   const chartData = {
-    labels: data.map((_, idx) => idx),
+    labels: data.map((_, i) => i), // using index as x-axis
     datasets: [
       {
         data,
-        borderColor: '#6366f1', // indigo-500
+        borderColor: '#22c55e', // green-500
         backgroundColor: 'transparent',
         borderWidth: 2,
-        tension: 0.3,
+        tension: 0.4,
         pointRadius: 0,
       },
     ],
@@ -31,6 +33,7 @@ export function MiniSparkline({ data }) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: false,
     elements: {
       line: { borderJoinStyle: 'round' },
     },
@@ -40,15 +43,14 @@ export function MiniSparkline({ data }) {
         enabled: true,
         intersect: false,
         mode: 'index',
+        callbacks: {
+          label: (ctx) => `Price: $${ctx.raw.toFixed(2)}`,
+        },
       },
     },
     scales: {
-      x: {
-        display: false,
-      },
-      y: {
-        display: false,
-      },
+      x: { display: false },
+      y: { display: false },
     },
   };
 

@@ -1,21 +1,31 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { fetchMarketData } from '../utils/cryptoAPI';
 import { MiniSparkline } from './MiniSparkline';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
+import { useCurrency } from '../context/CurrencyContext';
 
 export function MarketTable() {
   const [coins, setCoins] = useState([]);
+  const { currency } = useCurrency();
+
+  const currencySymbols = {
+    usd: '$',
+    inr: '₹',
+    eur: '€',
+  };
 
   useEffect(() => {
     AOS.init({ duration: 800, once: true });
-    fetchMarketData('usd', 10, true).then(setCoins);
   }, []);
+
+  useEffect(() => {
+    fetchMarketData(currency, 10, true).then(setCoins);
+  }, [currency]);
 
   return (
     <section className="mt-16" data-aos="fade-up">
-      <h2 className="text-3xl font-bold mb-6 text-center">
+      <h2 className="text-3xl font-bold mb-6 text-center text-gray-800 dark:text-white">
         📈 Today's Top Cryptos
       </h2>
 
@@ -27,7 +37,6 @@ export function MarketTable() {
               <th className="px-6 py-3">Price</th>
               <th className="px-6 py-3">24h %</th>
               <th className="px-6 py-3">Chart</th>
-              <th className="px-6 py-3">More</th>
             </tr>
           </thead>
           <tbody>
@@ -42,7 +51,10 @@ export function MarketTable() {
                   <img src={coin.image} alt={coin.name} className="w-5 h-5" />
                   {coin.name} ({coin.symbol.toUpperCase()})
                 </td>
-                <td className="px-6 py-4">${coin.current_price.toLocaleString()}</td>
+                <td className="px-6 py-4">
+                  {currencySymbols[currency.toLowerCase()] || currency.toUpperCase()}
+                  {coin.current_price.toLocaleString()}
+                </td>
                 <td
                   className={`px-6 py-4 ${
                     coin.price_change_percentage_24h > 0
@@ -54,14 +66,6 @@ export function MarketTable() {
                 </td>
                 <td className="px-6 py-4 w-28">
                   <MiniSparkline data={coin.sparkline_in_7d?.price || []} />
-                </td>
-                <td className="px-6 py-4">
-                  <Link
-                    to={`/coin/${coin.id}`}
-                    className="text-indigo-500 hover:underline text-xs"
-                  >
-                    Learn More →
-                  </Link>
                 </td>
               </tr>
             ))}

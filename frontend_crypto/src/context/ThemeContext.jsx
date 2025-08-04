@@ -1,34 +1,34 @@
-// context/ThemeContext.jsx
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useUser } from './UserContext';
 
 const ThemeContext = createContext();
-
 export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider = ({ children }) => {
+  const { user } = useUser();
   const [theme, setTheme] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') || 'light';
-    }
-    return 'light';
+    return localStorage.getItem('theme') || 'light';
   });
 
   useEffect(() => {
-    const root = window.document.documentElement;
+    if (user?.settings?.darkMode !== undefined) {
+      const preferred = user.settings.darkMode ? 'dark' : 'light';
+      setTheme(preferred);
+      localStorage.setItem('theme', preferred);
+    }
+  }, [user?.settings?.darkMode]);
+
+  useEffect(() => {
+    const root = document.documentElement;
     if (theme === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
-    localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  };
-
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

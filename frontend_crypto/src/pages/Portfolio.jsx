@@ -1,81 +1,570 @@
-// pages/Portfolio.jsx
-import React, { useState, useEffect } from 'react';
-import { Sidebar } from '../components/Sidebar';
+// // 👇 All your imports (same as before)
+// import React, { useEffect, useState, useMemo } from 'react';
+// import axiosInstance from '../utils/axiosInstance';
+// import { Topbar } from '../components/Topbar';
+// import { Footer } from '../components/Footer';
+// import { fetchMarketData } from '../utils/cryptoAPI';
+// import { Sidebar } from '../components/Sidebar';
+// import { useSidebar } from '../context/SidebarContext';
+// import { calculatePortfolioStats } from '../utils/portfolioUtils';
+// import { useCurrency } from '../context/CurrencyContext';
+// import { Pie, Line } from 'react-chartjs-2';
+// // ✅ New Modal Components:
+
+// import { SellConfirmationModal } from '../components/SellConfirmationModal';
+// import { Transaction } from './Transaction';
+// import {
+//   Chart as ChartJS,
+//   ArcElement,
+//   Tooltip,
+//   Legend,
+//   CategoryScale,
+//   LinearScale,
+//   PointElement,
+//   LineElement,
+// } from 'chart.js';
+// import { ToastContainer, toast } from 'react-toastify';
+// import 'react-toastify/dist/ReactToastify.css';
+// import { motion, AnimatePresence } from 'framer-motion';
+
+// ChartJS.register(
+//   ArcElement,
+//   Tooltip,
+//   Legend,
+//   CategoryScale,
+//   LinearScale,
+//   PointElement,
+//   LineElement
+// );
+
+// export function Portfolio() {
+//   const [holdings, setHoldings] = useState([]);
+//   const [marketData, setMarketData] = useState([]);
+//   const [isLoading, setIsLoading] = useState(true);
+//   const { isOpen } = useSidebar();
+//   const [selectedCoin, setSelectedCoin] = useState(null);
+//   const [isModalOpen, setIsModalOpen] = useState(false);
+//   const [coinToSell, setCoinToSell] = useState(null);
+//   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+//   const { currency } = useCurrency();
+//   const { total, gain24h } = calculatePortfolioStats(holdings, marketData);
+
+//   const formatCurrency = (amount) =>
+//     new Intl.NumberFormat('en-IN', {
+//       style: 'currency',
+//       currency,
+//       maximumFractionDigits: 2,
+//     }).format(amount);
+
+//   const fetchPortfolio = async () => {
+//     try {
+//       const res = await axiosInstance.get('/portfolio');
+//       const userHoldings = Array.isArray(res.data.holdings) ? res.data.holdings : [];
+//       setHoldings(userHoldings);
+
+//       const coinIds = userHoldings.map((h) => h.coinId).join(',');
+//       if (coinIds) {
+//         const marketRes = await fetchMarketData(currency.toLowerCase(), 100);
+//         const filteredData = marketRes.filter((coin) => coinIds.includes(coin.id));
+//         setMarketData(filteredData);
+//       } else {
+//         setMarketData([]);
+//       }
+//     } catch (err) {
+//       console.error('Error fetching portfolio:', err);
+//       toast.error(`Failed to load portfolio: ${err.response?.data?.message || 'Network error'}`);
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   useEffect(() => {
+//     fetchPortfolio();
+//     const interval = setInterval(fetchPortfolio, 60000);
+//     return () => clearInterval(interval);
+//   }, [currency]);
+
+//   const getQuantity = (coinId) => {
+//     const holding = holdings.find((h) => h.coinId === coinId);
+//     return holding ? holding.quantity || 0 : 0;
+//   };
+
+//   const totalValue = useMemo(() => {
+//     return marketData.reduce((acc, coin) => {
+//       const quantity = getQuantity(coin.id);
+//       return acc + quantity * (coin.current_price ?? 0);
+//     }, 0);
+//   }, [marketData, holdings]);
+
+//   const handleSell = async (coinId, quantityToSell) => {
+//     try {
+//       await axiosInstance.put(`/portfolio/${coinId}`, { coinId, amount: -quantityToSell });
+//       toast.success(`Sold ${quantityToSell} ${coinId}`);
+//       await fetchPortfolio();
+//     } catch (err) {
+//       console.error(`Sell error for ${coinId}:`, err);
+//       toast.error(`Failed to sell ${coinId}: ${err.response?.data?.message || 'Network error'}`);
+//     }
+//   };
+
+//   const handleBuy = async (coinId, quantityToBuy) => {
+//     if (!coinId) return toast.error('Invalid coin selected');
+//     if (quantityToBuy <= 0) return toast.error('Quantity must be greater than 0');
+//     const previousHoldings = [...holdings];
+//     try {
+//       try {
+//         await axiosInstance.put(`/portfolio/${coinId}`, { coinId, amount: quantityToBuy });
+//       } catch (putErr) {
+//         if (putErr.response?.status === 404) {
+//           await axiosInstance.post('/portfolio', { coinId, amount: quantityToBuy });
+//         } else {
+//           throw putErr;
+//         }
+//       }
+//       toast.success(`Bought ${quantityToBuy} ${coinId}`);
+//       await fetchPortfolio();
+//     } catch (err) {
+//       setHoldings(previousHoldings);
+//       toast.error(`Failed to buy ${coinId}: ${err.response?.data?.message || 'Unable to process purchase'}`);
+//     } finally {
+//       setIsModalOpen(false);
+//       setSelectedCoin(null);
+//     }
+//   };
+
+//   const pieData = useMemo(() => ({
+//     labels: marketData.map((coin) => coin.name),
+//     datasets: [
+//       {
+//         label: 'Value',
+//         data: marketData.map((coin) => getQuantity(coin.id) * coin.current_price),
+//         backgroundColor: marketData.map((_, i) =>
+//           `hsl(${(i * 45) % 360}, 70%, 60%)`
+//         ),
+//         borderWidth: 1,
+//       },
+//     ],
+//   }), [marketData, holdings]);
+
+//   const lineData = useMemo(() => ({
+//     labels: marketData.map((coin) => coin.name),
+//     datasets: [
+//       {
+//         label: 'Holding Value',
+//         data: marketData.map((coin) => getQuantity(coin.id) * coin.current_price),
+//         borderColor: '#14b8a6',
+//         backgroundColor: 'rgba(20, 184, 166, 0.2)',
+//         tension: 0.4,
+//       },
+//     ],
+//   }), [marketData, holdings]);
+
+//   if (isLoading) {
+//     return <div className="text-center p-6 text-gray-600 dark:text-gray-300">Loading portfolio...</div>;
+//   }
+
+//   return (
+//     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-white flex">
+//       <Sidebar />
+//       <div className={`flex-1 transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-16'} flex flex-col`}>
+//         <Topbar />
+//         <div className="flex-1 px-4 sm:px-8 py-8">
+//           <h2 className="text-3xl font-bold mb-4">📊 My Portfolio</h2>
+//           <div className="text-lg font-semibold mb-6 text-green-600 dark:text-green-400">
+//             Total Value: {formatCurrency(totalValue)}
+//           </div>
+
+//           {marketData.length === 0 ? (
+//             <div className="text-gray-500 dark:text-gray-400">No coins in your portfolio.</div>
+//           ) : (
+//             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//               {marketData.map((coin) => {
+//                 const quantity = getQuantity(coin.id);
+//                 const value = quantity * coin.current_price;
+//                 return (
+//                   <div
+//                     key={coin.id}
+//                     className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md transition hover:scale-[1.01]"
+//                   >
+//                     <div className="flex items-center gap-4">
+//                       <img src={coin.image} alt={`${coin.name} logo`} className="w-10 h-10" />
+//                       <div>
+//                         <div className="font-semibold text-lg">{coin.name}</div>
+//                         <div className="text-sm text-gray-500 dark:text-gray-400">Qty: {quantity}</div>
+//                       </div>
+//                     </div>
+//                     <div className="flex flex-col items-end gap-1">
+//                       <div className="text-gray-800 dark:text-gray-100 font-semibold">
+//                         {formatCurrency(value)}
+//                       </div>
+//                       <div className="flex gap-2">
+//                         <button
+//                           onClick={() => {
+//                             setSelectedCoin(coin);
+//                             setIsModalOpen(true);
+//                           }}
+//                           className="px-3 py-1 text-sm bg-green-500 hover:bg-green-600 text-white rounded"
+//                         >
+//                           Buy
+//                         </button>
+//                         <button
+//                           onClick={() => {
+//                             setCoinToSell({ ...coin, quantity });
+//                             setIsSellModalOpen(true);
+//                           }}
+//                           className="px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded"
+//                         >
+//                           Sell
+//                         </button>
+//                       </div>
+//                     </div>
+//                   </div>
+//                 );
+//               })}
+//             </div>
+//           )}
+
+//           {marketData.length > 0 && (
+//             <div className="grid md:grid-cols-2 gap-6 mt-10">
+//               <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md min-h-[400px]">
+//                 <h3 className="text-lg font-semibold mb-4">💹 Portfolio Breakdown</h3>
+//                 <div className="relative h-[300px] w-full">
+//                   <Pie data={pieData} options={{ responsive: true, maintainAspectRatio: false }} />
+//                 </div>
+//               </div>
+//               <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md min-h-[400px]">
+//                 <h3 className="text-lg font-semibold mb-4">📈 Holdings Chart</h3>
+//                 <div className="relative h-[300px] w-full">
+//                   <Line data={lineData} options={{ responsive: true, maintainAspectRatio: false }} />
+//                 </div>
+//               </div>
+//             </div>
+//           )}
+//           <div className="mt-10">
+//           <Transaction />
+//           </div>
+
+
+//           <ToastContainer />
+
+//           {/* 👇 Buy & Sell Modals */}
+//           <BuyModal
+//             coin={selectedCoin}
+//             isOpen={isModalOpen}
+//             onClose={() => {
+//               setIsModalOpen(false);
+//               setSelectedCoin(null);
+//             }}
+//             onBuy={handleBuy}
+//           />
+
+//           <SellConfirmationModal
+//             coin={coinToSell}
+//             isOpen={isSellModalOpen}
+//             onCancel={() => {
+//               setCoinToSell(null);
+//               setIsSellModalOpen(false);
+//             }}
+//             onConfirm={(id, quantity) => {
+//               handleSell(id, quantity);
+//               setCoinToSell(null);
+//               setIsSellModalOpen(false);
+//             }}
+//           />
+//         </div>
+//         <Footer />
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
+
+import React, { useEffect, useState, useMemo } from 'react';
+import axiosInstance from '../utils/axiosInstance';
 import { Topbar } from '../components/Topbar';
 import { Footer } from '../components/Footer';
+import { fetchMarketData } from '../utils/cryptoAPI';
+import { Sidebar } from '../components/Sidebar';
+import { BuyModal } from '../components/BuyModal';
 import { useSidebar } from '../context/SidebarContext';
-import { useNavigate } from 'react-router-dom';
+import { calculatePortfolioStats } from '../utils/portfolioUtils';
+import { useCurrency } from '../context/CurrencyContext';
+import { Pie, Line } from 'react-chartjs-2';
+import { SellModal} from '../components/SellModal';
+import { Transaction } from './Transaction';
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+} from 'chart.js';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+ChartJS.register(
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement
+);
 
 export function Portfolio() {
-  const [holdings] = useState([
-    { name: 'Bitcoin', symbol: 'BTC', amount: 1.2, price: 30000 },
-    { name: 'Ethereum', symbol: 'ETH', amount: 5, price: 2000 },
-    { name: 'Cardano', symbol: 'ADA', amount: 2000, price: 0.35 },
-  ]);
+  const [holdings, setHoldings] = useState([]);
+  const [marketData, setMarketData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { isOpen } = useSidebar();
+  const [selectedCoin, setSelectedCoin] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [coinToSell, setCoinToSell] = useState(null);
+  const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+  const { currency } = useCurrency();
 
-  const totalValue = holdings.reduce((acc, h) => acc + h.amount * h.price, 0);
-   const navigate = useNavigate();
-    const { isOpen } = useSidebar();
-  
-    useEffect(() => {
-      const token = localStorage.getItem('token');
-      if (!token) navigate('/login');
-    }, [navigate]);
+  const formatCurrency = (amount) =>
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 2,
+    }).format(amount);
+
+ const fetchPortfolio = async () => {
+  try {
+    const res = await axiosInstance.get('/portfolio');
+    const userHoldings = Array.isArray(res.data) ? res.data : [];
+    setHoldings(userHoldings);
+
+    const coinIds = userHoldings.map((h) => h.coinId.toLowerCase());
+    if (coinIds.length > 0) {
+      const marketRes = await fetchMarketData(currency.toLowerCase());
+      const filtered = marketRes.filter((coin) =>
+        coinIds.includes(coin.id?.toLowerCase())
+      );
+      setMarketData(filtered);
+    } else {
+      setMarketData([]);
+    }
+  } catch (err) {
+    console.error('Error fetching portfolio:', err);
+    toast.error(`Failed to load portfolio: ${err.response?.data?.message || 'Network error'}`);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
+  useEffect(() => {
+    fetchPortfolio();
+    const interval = setInterval(fetchPortfolio, 60000);
+    return () => clearInterval(interval);
+  }, [currency]);
+
+  const getQuantity = (coinId) => {
+    const holding = holdings.find((h) => h.coinId.toLowerCase() === coinId.toLowerCase());
+    return holding ? holding.quantity || 0 : 0;
+  };
+
+  const totalValue = useMemo(() => {
+    return marketData.reduce((acc, coin) => {
+      const quantity = getQuantity(coin.id);
+      return acc + quantity * (coin.current_price ?? 0);
+    }, 0);
+  }, [marketData, holdings]);
+
+ const handleSell = async (coinId, quantity, symbol, price) => {
+  try {
+    await axiosInstance.post('/portfolio/update', {
+      coinId,
+      symbol,
+      quantity,
+      price,
+      type: 'sell',
+    });
+
+    toast.success(`Sold ${quantity} ${symbol}`);
+    await fetchPortfolio();
+  } catch (err) {
+    console.error(`Sell error for ${coinId}:`, err);
+    toast.error(
+      `Failed to sell ${coinId}: ${err.response?.data?.error || 'Network error'}`
+    );
+  }
+};
+
+
+  const handleBuy = async (coinId, quantityToBuy) => {
+  const coin = marketData.find((c) => c.id === coinId);
+  if (!coin) return alert('Coin not found');
+
+  try {
+    await axiosInstance.post('/portfolio/update', {
+      coinId: coin.id,
+      symbol: coin.symbol,
+      quantity: quantityToBuy,
+      price: coin.current_price,
+      type: 'buy',
+    });
+
+    alert(`Bought ${quantityToBuy} ${coin.symbol}`);
+    await fetchPortfolio();
+  } catch (err) {
+    console.error('Buy failed:', err);
+    alert(err.response?.data?.error || 'Buy failed');
+  } finally {
+    setSelectedCoin(null);
+    setIsModalOpen(false);
+  }
+};
+
+
+  const pieData = useMemo(() => ({
+    labels: marketData.map((coin) => coin.name),
+    datasets: [
+      {
+        label: 'Value',
+        data: marketData.map((coin) => getQuantity(coin.id) * coin.current_price),
+        backgroundColor: marketData.map((_, i) =>
+          `hsl(${(i * 45) % 360}, 70%, 60%)`
+        ),
+        borderWidth: 1,
+      },
+    ],
+  }), [marketData, holdings]);
+
+  const lineData = useMemo(() => ({
+    labels: marketData.map((coin) => coin.name),
+    datasets: [
+      {
+        label: 'Holding Value',
+        data: marketData.map((coin) => getQuantity(coin.id) * coin.current_price),
+        borderColor: '#14b8a6',
+        backgroundColor: 'rgba(20, 184, 166, 0.2)',
+        tension: 0.4,
+      },
+    ],
+  }), [marketData, holdings]);
+
+  if (isLoading) {
+    return <div className="text-center p-6 text-gray-600 dark:text-gray-300">Loading portfolio...</div>;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-white flex">
       <Sidebar />
-      <div
-        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${
-          isOpen ? 'ml-64' : 'ml-16'
-        }`}
-      >
+      <div className={`flex-1 transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-16'} flex flex-col`}>
         <Topbar />
-        <main className="p-4 sm:p-6 space-y-8">
-          {/* Header */}
-          <div>
-            <h1 className="text-2xl font-bold mb-2">My Portfolio</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Overview of your current cryptocurrency holdings.
-            </p>
+        <div className="flex-1 px-4 sm:px-8 py-8">
+          <h2 className="text-3xl font-bold mb-4">📊 My Portfolio</h2>
+          <div className="text-lg font-semibold mb-6 text-green-600 dark:text-green-400">
+            Total Value: {formatCurrency(totalValue)}
           </div>
 
-          {/* Portfolio Summary */}
-          <div className="bg-white dark:bg-gray-800 rounded shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Portfolio Summary</h2>
-            <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
-              ${totalValue.toLocaleString()}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Total Value (USD)</p>
+          {marketData.length === 0 ? (
+            <div className="text-gray-500 dark:text-gray-400">No coins in your portfolio.</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {marketData.map((coin) => {
+                const quantity = getQuantity(coin.id);
+                const value = quantity * coin.current_price;
+                return (
+                  <div
+                    key={coin.id}
+                    className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md transition hover:scale-[1.01]"
+                  >
+                    <div className="flex items-center gap-4">
+                      <img src={coin.image} alt={`${coin.name} logo`} className="w-10 h-10" />
+                      <div>
+                        <div className="font-semibold text-lg">{coin.name}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Qty: {quantity}</div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="text-gray-800 dark:text-gray-100 font-semibold">
+                        {formatCurrency(value)}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedCoin(coin);
+                            setIsModalOpen(true);
+                          }}
+                          className="px-3 py-1 text-sm bg-green-500 hover:bg-green-600 text-white rounded"
+                        >
+                          Buy
+                        </button>
+                        <button
+                          onClick={() => {
+                            setCoinToSell({ ...coin, quantity });
+                            setIsSellModalOpen(true);
+                          }}
+                          className="px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded"
+                        >
+                          Sell
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {marketData.length > 0 && (
+            <div className="grid md:grid-cols-2 gap-6 mt-10">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md min-h-[400px]">
+                <h3 className="text-lg font-semibold mb-4">💹 Portfolio Breakdown</h3>
+                <div className="relative h-[300px] w-full">
+                  <Pie data={pieData} options={{ responsive: true, maintainAspectRatio: false }} />
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md min-h-[400px]">
+                <h3 className="text-lg font-semibold mb-4">📈 Holdings Chart</h3>
+                <div className="relative h-[300px] w-full">
+                  <Line data={lineData} options={{ responsive: true, maintainAspectRatio: false }} />
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="mt-10">
+            <Transaction />
           </div>
 
-          {/* Holdings Table */}
-          <div className="bg-white dark:bg-gray-800 rounded shadow p-6 overflow-x-auto">
-            <h2 className="text-lg font-semibold mb-4">Coin Holdings</h2>
-            <table className="min-w-full text-sm">
-              <thead className="text-left border-b dark:border-gray-700">
-                <tr>
-                  <th className="py-2">Coin</th>
-                  <th>Amount</th>
-                  <th>Price</th>
-                  <th>Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {holdings.map((coin, idx) => (
-                  <tr key={idx} className="border-b dark:border-gray-700">
-                    <td className="py-2">{coin.name} ({coin.symbol})</td>
-                    <td>{coin.amount}</td>
-                    <td>${coin.price.toLocaleString()}</td>
-                    <td>${(coin.amount * coin.price).toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </main>
+          <ToastContainer />
+
+          {/* Modals */}
+          <BuyModal
+  coin={selectedCoin}
+  isOpen={isModalOpen}
+  onClose={() => {
+    setIsModalOpen(false);
+    setSelectedCoin(null);
+  }}
+  onBuy={handleBuy}
+/>
+
+
+
+         <SellModal
+  coin={coinToSell}
+  isOpen={isSellModalOpen}
+  onClose={() => {
+    setCoinToSell(null);
+    setIsSellModalOpen(false);
+  }}
+  onSell={handleSell}
+/>
+
+        </div>
         <Footer />
       </div>
     </div>
   );
 }
+

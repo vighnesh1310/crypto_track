@@ -6,7 +6,9 @@ export function TrendingCoins() {
   const [coins, setCoins] = useState([]);
 
   useEffect(() => {
-    fetchMarketData('usd', 5).then(setCoins);
+    fetchMarketData('usd', 10).then((data) => {
+      setCoins(data.slice(0, 10)); // ensures exactly 10 coins max
+    });
   }, []);
 
   return (

@@ -10,6 +10,11 @@ root.render(
     <App />
   </React.StrictMode>
 );
+const theme = localStorage.getItem('theme') || 'light';
+if (theme === 'dark') {
+  document.documentElement.classList.add('dark');
+}
+
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

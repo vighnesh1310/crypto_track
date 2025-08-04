@@ -8,9 +8,7 @@ export function Header({ showProfileDropdown, showMobileMenu }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { theme, toggleTheme } = useDarkMode();
 
-  const user = JSON.parse(localStorage.getItem('user')) || {};
-  const avatarUrl = user?.avatarUrl || 'https://i.pravatar.cc/150?u=default';
-
+ 
   const toggleMenu = () => setIsMobileOpen(!isMobileOpen);
 
   const handleLogout = () => {
@@ -53,7 +51,7 @@ export function Header({ showProfileDropdown, showMobileMenu }) {
           {showProfileDropdown && (
             <div className="relative group">
               <button className="flex items-center gap-2 focus:outline-none">
-                <img src={avatarUrl} alt="avatar" className="w-8 h-8 rounded-full object-cover" />
+  
               </button>
               <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded shadow-lg py-2 hidden group-hover:block z-50">
                 <Link to="/profile" className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Profile</Link>
@@ -84,11 +82,12 @@ export function Header({ showProfileDropdown, showMobileMenu }) {
     <Link to="/market" className="block py-2 border-b border-gray-200 dark:border-gray-700">Market</Link>
     <Link to="/portfolio" className="block py-2 border-b border-gray-200 dark:border-gray-700">Portfolio</Link>
     <button
-      onClick={toggleTheme}
-      className="block w-full text-left py-2 border-b border-gray-200 dark:border-gray-700"
-    >
-      {theme === 'dark' ? 'Light Mode ☀️' : 'Dark Mode 🌙'}
-    </button>
+  onClick={toggleTheme}
+  className="block w-full text-left py-2 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+>
+  {theme === 'dark' ? 'Light Mode ☀️' : 'Dark Mode 🌙'}
+</button>
+
     {showProfileDropdown && (
       <>
         <Link to="/profile" className="block py-2 border-b border-gray-200 dark:border-gray-700">Profile</Link>
