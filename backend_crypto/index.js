@@ -13,7 +13,7 @@ app.use(express.json());
 
 // ✅ CORS setup for React frontend (http://localhost:3000)
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: 'https://crypto-track-xi.vercel.app' ||'http://localhost:3000',
   credentials: true
 }));
 
