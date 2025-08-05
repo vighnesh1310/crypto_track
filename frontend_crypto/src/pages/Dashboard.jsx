@@ -10,7 +10,6 @@ import { NewsSection } from '../components/NewsSection';
 import { WalletOverview } from '../components/WalletOverview';
 import { TrendingCoins } from '../components/TrendingCoins';
 import { AlertsPanel } from '../components/AlertsPanel';
-import { QuickTrade } from '../components/QuickTrade';
 import { Footer } from '../components/Footer';
 import { useSidebar } from '../context/SidebarContext';
 
@@ -32,37 +31,31 @@ export function Dashboard() {
         }`}
       >
         <Topbar />
-        <main className="p-4 sm:p-6 space-y-10">
-          {/* Summary Cards */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-            <SummaryCards />
-          </section>
+        <main className="p-4 sm:p-6 space-y-10 max-w-screen-2xl mx-auto w-full">
+  <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+    <SummaryCards />
+  </section>
 
-          {/* Wallet + Trending */}
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <WalletOverview />
-            <TrendingCoins />
-          </section>
+  <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <WalletOverview />
+    <TrendingCoins />
+  </section>
 
-          {/* Price Table + Portfolio Chart */}
-          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <PriceTable />
-            </div>
-            <PortfolioChart />
-          </section>
+  <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="lg:col-span-2 overflow-x-auto">
+      <PriceTable />
+    </div>
+    <PortfolioChart />
+  </section>
 
-          {/* Alerts + Quick Trade */}
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <AlertsPanel />
-            <QuickTrade />
-          </section>
+  <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <AlertsPanel />
+    <NewsSection />
+  </section>
 
-          {/* News */}
-          <section className="grid grid-cols-0 lg:grid-cols-0 gap-2">
-            <NewsSection />
-          </section>
-        </main>
+  
+</main>
+
         <Footer />
       </div>
     </div>

@@ -292,7 +292,7 @@ import { useSidebar } from '../context/SidebarContext';
 import { calculatePortfolioStats } from '../utils/portfolioUtils';
 import { useCurrency } from '../context/CurrencyContext';
 import { Pie, Line } from 'react-chartjs-2';
-import { SellModal} from '../components/SellModal';
+import { SellModal } from '../components/SellModal';
 import { Transaction } from './Transaction';
 import {
   Chart as ChartJS,
@@ -306,6 +306,8 @@ import {
 } from 'chart.js';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import Papa from 'papaparse';
+import { saveAs } from 'file-saver';
 
 ChartJS.register(
   ArcElement,
@@ -335,30 +337,29 @@ export function Portfolio() {
       maximumFractionDigits: 2,
     }).format(amount);
 
- const fetchPortfolio = async () => {
-  try {
-    const res = await axiosInstance.get('/portfolio');
-    const userHoldings = Array.isArray(res.data) ? res.data : [];
-    setHoldings(userHoldings);
+  const fetchPortfolio = async () => {
+    try {
+      const res = await axiosInstance.get('/portfolio');
+      const userHoldings = Array.isArray(res.data) ? res.data : [];
+      setHoldings(userHoldings);
 
-    const coinIds = userHoldings.map((h) => h.coinId.toLowerCase());
-    if (coinIds.length > 0) {
-      const marketRes = await fetchMarketData(currency.toLowerCase());
-      const filtered = marketRes.filter((coin) =>
-        coinIds.includes(coin.id?.toLowerCase())
-      );
-      setMarketData(filtered);
-    } else {
-      setMarketData([]);
+      const coinIds = userHoldings.map((h) => h.coinId.toLowerCase());
+      if (coinIds.length > 0) {
+        const marketRes = await fetchMarketData(currency.toLowerCase());
+        const filtered = marketRes.filter((coin) =>
+          coinIds.includes(coin.id?.toLowerCase())
+        );
+        setMarketData(filtered);
+      } else {
+        setMarketData([]);
+      }
+    } catch (err) {
+      console.error('Error fetching portfolio:', err);
+      toast.error(`Failed to load portfolio: ${err.response?.data?.message || 'Network error'}`);
+    } finally {
+      setIsLoading(false);
     }
-  } catch (err) {
-    console.error('Error fetching portfolio:', err);
-    toast.error(`Failed to load portfolio: ${err.response?.data?.message || 'Network error'}`);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+  };
 
   useEffect(() => {
     fetchPortfolio();
@@ -378,51 +379,66 @@ export function Portfolio() {
     }, 0);
   }, [marketData, holdings]);
 
- const handleSell = async (coinId, quantity, symbol, price) => {
-  try {
-    await axiosInstance.post('/portfolio/update', {
-      coinId,
-      symbol,
-      quantity,
-      price,
-      type: 'sell',
-    });
-
-    toast.success(`Sold ${quantity} ${symbol}`);
-    await fetchPortfolio();
-  } catch (err) {
-    console.error(`Sell error for ${coinId}:`, err);
-    toast.error(
-      `Failed to sell ${coinId}: ${err.response?.data?.error || 'Network error'}`
-    );
-  }
-};
-
+  const handleSell = async (coinId, quantity, symbol, price) => {
+    try {
+      await axiosInstance.post('/portfolio/update', {
+        coinId,
+        symbol,
+        quantity,
+        price,
+        type: 'sell',
+      });
+      toast.success(`Sold ${quantity} ${symbol}`);
+      await fetchPortfolio();
+    } catch (err) {
+      console.error(`Sell error for ${coinId}:`, err);
+      toast.error(
+        `Failed to sell ${coinId}: ${err.response?.data?.error || 'Network error'}`
+      );
+    }
+  };
 
   const handleBuy = async (coinId, quantityToBuy) => {
-  const coin = marketData.find((c) => c.id === coinId);
-  if (!coin) return alert('Coin not found');
+    const coin = marketData.find((c) => c.id === coinId);
+    if (!coin) return alert('Coin not found');
 
-  try {
-    await axiosInstance.post('/portfolio/update', {
-      coinId: coin.id,
-      symbol: coin.symbol,
-      quantity: quantityToBuy,
-      price: coin.current_price,
-      type: 'buy',
+    try {
+      await axiosInstance.post('/portfolio/update', {
+        coinId: coin.id,
+        symbol: coin.symbol,
+        quantity: quantityToBuy,
+        price: coin.current_price,
+        type: 'buy',
+      });
+
+      alert(`Bought ${quantityToBuy} ${coin.symbol}`);
+      await fetchPortfolio();
+    } catch (err) {
+      console.error('Buy failed:', err);
+      alert(err.response?.data?.error || 'Buy failed');
+    } finally {
+      setSelectedCoin(null);
+      setIsModalOpen(false);
+    }
+  };
+
+  const exportToCSV = () => {
+    const csvData = marketData.map((coin) => {
+      const quantity = getQuantity(coin.id);
+      const value = quantity * coin.current_price;
+      return {
+        Name: coin.name,
+        Symbol: coin.symbol.toUpperCase(),
+        Quantity: quantity,
+        'Current Price': coin.current_price,
+        'Total Value': value,
+      };
     });
 
-    alert(`Bought ${quantityToBuy} ${coin.symbol}`);
-    await fetchPortfolio();
-  } catch (err) {
-    console.error('Buy failed:', err);
-    alert(err.response?.data?.error || 'Buy failed');
-  } finally {
-    setSelectedCoin(null);
-    setIsModalOpen(false);
-  }
-};
-
+    const csv = Papa.unparse(csvData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    saveAs(blob, 'portfolio.csv');
+  };
 
   const pieData = useMemo(() => ({
     labels: marketData.map((coin) => coin.name),
@@ -466,6 +482,13 @@ export function Portfolio() {
             Total Value: {formatCurrency(totalValue)}
           </div>
 
+          <button
+            onClick={exportToCSV}
+            className="mb-6 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-md"
+          >
+            ⬇️ Export to CSV
+          </button>
+
           {marketData.length === 0 ? (
             <div className="text-gray-500 dark:text-gray-400">No coins in your portfolio.</div>
           ) : (
@@ -478,24 +501,25 @@ export function Portfolio() {
                     key={coin.id}
                     className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md transition hover:scale-[1.01]"
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 min-w-[150px]">
                       <img src={coin.image} alt={`${coin.name} logo`} className="w-10 h-10" />
                       <div>
                         <div className="font-semibold text-lg">{coin.name}</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">Qty: {quantity}</div>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
+
+                    <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
                       <div className="text-gray-800 dark:text-gray-100 font-semibold">
                         {formatCurrency(value)}
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col xs:flex-row gap-2 w-full sm:w-auto">
                         <button
                           onClick={() => {
                             setSelectedCoin(coin);
                             setIsModalOpen(true);
                           }}
-                          className="px-3 py-1 text-sm bg-green-500 hover:bg-green-600 text-white rounded"
+                          className="w-full sm:w-auto px-3 py-1 text-sm bg-green-500 hover:bg-green-600 text-white rounded"
                         >
                           Buy
                         </button>
@@ -504,7 +528,7 @@ export function Portfolio() {
                             setCoinToSell({ ...coin, quantity });
                             setIsSellModalOpen(true);
                           }}
-                          className="px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded"
+                          className="w-full sm:w-auto px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded"
                         >
                           Sell
                         </button>
@@ -532,39 +556,35 @@ export function Portfolio() {
               </div>
             </div>
           )}
+
           <div className="mt-10">
             <Transaction />
           </div>
 
           <ToastContainer />
 
-          {/* Modals */}
           <BuyModal
-  coin={selectedCoin}
-  isOpen={isModalOpen}
-  onClose={() => {
-    setIsModalOpen(false);
-    setSelectedCoin(null);
-  }}
-  onBuy={handleBuy}
-/>
+            coin={selectedCoin}
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false);
+              setSelectedCoin(null);
+            }}
+            onBuy={handleBuy}
+          />
 
-
-
-         <SellModal
-  coin={coinToSell}
-  isOpen={isSellModalOpen}
-  onClose={() => {
-    setCoinToSell(null);
-    setIsSellModalOpen(false);
-  }}
-  onSell={handleSell}
-/>
-
+          <SellModal
+            coin={coinToSell}
+            isOpen={isSellModalOpen}
+            onClose={() => {
+              setCoinToSell(null);
+              setIsSellModalOpen(false);
+            }}
+            onSell={handleSell}
+          />
         </div>
         <Footer />
       </div>
     </div>
   );
 }
-

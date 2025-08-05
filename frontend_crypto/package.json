@@ -20,6 +20,7 @@
     "jspdf-autotable": "^5.0.2",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.525.0",
+    "papaparse": "^5.5.3",
     "razorpay": "^2.9.6",
     "react": "^19.1.0",
     "react-chartjs-2": "^5.3.0",
