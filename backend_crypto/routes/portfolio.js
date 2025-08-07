@@ -5,26 +5,25 @@ const Transaction = require('../models/Transaction');
 const auth = require('../middleware/auth');
 const axios = require('axios');
 
-// GET user portfolio
-// ✅ GET user portfolio with CryptoCompare prices (updated)
+// ========================
+// 📊 GET PORTFOLIO
+// ========================
 router.get('/', auth, async (req, res) => {
   try {
+    const { type } = req.query;
+    const vs_currency = req.query.currency?.toUpperCase() || 'USD';
+
     const portfolio = await Portfolio.findOne({ user: req.user.id });
-    const holdings = portfolio?.holdings || [];
+    let holdings = portfolio?.holdings || [];
+
+    if (type) {
+      holdings = holdings.filter((h) => h.type === type);
+    }
 
     if (holdings.length === 0) return res.json([]);
 
-    const vs_currency = req.query.currency?.toUpperCase() || 'USD';
-
-    const holdingsWithMissingSymbols = holdings.filter(h => !h.symbol);
-    if (holdingsWithMissingSymbols.length > 0) {
-      console.warn('⚠️ Holdings with missing symbols:', holdingsWithMissingSymbols);
-      return res.json([]);
-    }
-
     const symbols = holdings.map(h => h.symbol.toUpperCase()).join(',');
     const url = `https://min-api.cryptocompare.com/data/pricemultifull?fsyms=${symbols}&tsyms=${vs_currency}`;
-
     const priceRes = await axios.get(url);
     const priceData = priceRes.data.RAW;
 
@@ -34,11 +33,11 @@ router.get('/', auth, async (req, res) => {
 
       return {
         ...h._doc,
-        current_price: priceInfo?.PRICE || 0,
+        current_price: priceInfo?.PRICE || h.current_price || 0,
         image: priceInfo?.IMAGEURL
           ? `https://www.cryptocompare.com${priceInfo.IMAGEURL}`
-          : '',
-        name: priceInfo?.FROMSYMBOL || symbol,
+          : h.image || '',
+        name: h.name || symbol,
         value: (priceInfo?.PRICE || 0) * h.quantity,
       };
     });
@@ -50,10 +49,11 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-
-// Basic add-only endpoint with symbol support
+// ========================
+// ➕ ADD TO PORTFOLIO (Track or Buy)
+// ========================
 router.post('/', auth, async (req, res) => {
-  const { coinId, symbol, amount } = req.body;
+  const { coinId, symbol, amount, type = 'track', image, name, current_price } = req.body;
 
   if (!coinId || !symbol || !amount) {
     return res.status(400).json({ error: 'coinId, symbol, and amount are required.' });
@@ -61,32 +61,43 @@ router.post('/', auth, async (req, res) => {
 
   try {
     let portfolio = await Portfolio.findOne({ user: req.user.id });
-
     if (!portfolio) {
       portfolio = new Portfolio({ user: req.user.id, holdings: [] });
     }
 
-    const index = portfolio.holdings.findIndex((h) => h.coinId === coinId);
+    const existing = portfolio.holdings.find(
+      (h) => h.coinId === coinId && h.type === type
+    );
 
-    if (index >= 0) {
-      // Update quantity
-      portfolio.holdings[index].quantity += amount;
+    if (existing) {
+      if (type === 'buy') {
+        existing.quantity += amount;
+      } else {
+        return res.status(200).json({ message: 'Coin already tracked in portfolio.' });
+      }
     } else {
-      // Add new coin with symbol
-      portfolio.holdings.push({ coinId, symbol, quantity: amount });
+      portfolio.holdings.push({
+        coinId,
+        symbol,
+        quantity: amount,
+        type,
+        image,
+        name,
+        current_price,
+      });
     }
 
     await portfolio.save();
-
-    res.status(200).json({ message: 'Coin added successfully.', holdings: portfolio.holdings });
+    res.status(200).json({ message: 'Coin added to portfolio.', holdings: portfolio.holdings });
   } catch (err) {
-    console.error('Error adding coin:', err.message);
-    res.status(500).json({ error: 'Server error while adding coin to portfolio.' });
+    console.error('Error adding to portfolio:', err.message);
+    res.status(500).json({ error: 'Failed to add coin.' });
   }
 });
 
-
-// BUY / SELL endpoint
+// ========================
+// 💰 BUY / SELL
+// ========================
 router.post('/update', auth, async (req, res) => {
   const { coinId, symbol, quantity, price, type } = req.body;
   const userId = req.user.id;
@@ -111,17 +122,19 @@ router.post('/update', auth, async (req, res) => {
     if (type === 'buy') {
       if (index >= 0) {
         const existing = portfolio.holdings[index];
-        const totalCost = existing.averageBuyPrice * existing.quantity + price * quantity;
+        const totalCost = (existing.averageBuyPrice || 0) * existing.quantity + price * quantity;
         const newQuantity = existing.quantity + quantity;
 
         portfolio.holdings[index].quantity = newQuantity;
         portfolio.holdings[index].averageBuyPrice = totalCost / newQuantity;
+        portfolio.holdings[index].type = 'buy';
       } else {
         portfolio.holdings.push({
           coinId,
           symbol,
           quantity,
           averageBuyPrice: price,
+          type: 'buy'
         });
       }
     } else if (type === 'sell') {
@@ -129,23 +142,32 @@ router.post('/update', auth, async (req, res) => {
         return res.status(400).json({ error: 'Insufficient quantity to sell.' });
       }
 
+      const avgPrice = portfolio.holdings[index].averageBuyPrice || 0;
+      const currentQty = portfolio.holdings[index].quantity;
+
+      // Deduct quantity
       portfolio.holdings[index].quantity -= quantity;
 
+      // Calculate realized profit
+      const realizedProfit = (price - avgPrice) * quantity;
+
+      // Remove if zero
       if (portfolio.holdings[index].quantity === 0) {
         portfolio.holdings.splice(index, 1);
       }
+
+      await Transaction.create({
+        user: userId,
+        coinId,
+        symbol,
+        type: 'sell',
+        quantity,
+        price,
+        realizedProfit,
+      });
     }
 
     await portfolio.save();
-
-    await Transaction.create({
-      user: userId,
-      coinId,
-      symbol,
-      type,
-      quantity,
-      price,
-    });
 
     res.json({ message: `${type.toUpperCase()} successful`, holdings: portfolio.holdings });
   } catch (err) {
@@ -154,7 +176,9 @@ router.post('/update', auth, async (req, res) => {
   }
 });
 
-// Get transaction history
+// ========================
+// 📄 GET TRANSACTIONS
+// ========================
 router.get('/transactions', auth, async (req, res) => {
   try {
     const transactions = await Transaction.find({ user: req.user.id }).sort({ date: -1 });
@@ -164,8 +188,9 @@ router.get('/transactions', auth, async (req, res) => {
   }
 });
 
-// Portfolio history chart (unchanged)
-// 📊 Portfolio history using CryptoCompare
+// ========================
+// 📈 PORTFOLIO VALUE HISTORY
+// ========================
 router.get('/portfolio-history', auth, async (req, res) => {
   const { range = '7D', currency = 'USD' } = req.query;
   const vs_currency = currency.toUpperCase();
@@ -185,9 +210,7 @@ router.get('/portfolio-history', auth, async (req, res) => {
     const portfolio = await Portfolio.findOne({ user: req.user.id });
     if (!portfolio || portfolio.holdings.length === 0) return res.json([]);
 
-    const holdings = portfolio.holdings;
-
-    const historyPromises = holdings.map(async (holding) => {
+    const historyPromises = portfolio.holdings.map(async (holding) => {
       const symbol = holding.symbol.toUpperCase();
       const url = `https://min-api.cryptocompare.com/data/v2/${endpoint}?fsym=${symbol}&tsym=${vs_currency}&limit=${limit}&aggregate=${aggregate}`;
 
@@ -208,23 +231,14 @@ router.get('/portfolio-history', auth, async (req, res) => {
 
     const coinHistories = (await Promise.all(historyPromises)).filter(Boolean);
 
-    const validHistories = coinHistories.filter(
-      (c) => Array.isArray(c.prices) && c.prices.length > 0
-    );
-
-    if (validHistories.length === 0) {
-      console.warn('⚠️ No valid coin history data');
-      return res.json([]);
-    }
-
-    const numPoints = validHistories[0].prices.length;
+    const numPoints = coinHistories[0]?.prices?.length || 0;
     const chartData = [];
 
     for (let i = 0; i < numPoints; i++) {
       let totalValue = 0;
       let dateLabel = '';
 
-      for (const coin of validHistories) {
+      for (const coin of coinHistories) {
         const point = coin.prices[i];
         if (!point) continue;
 
@@ -253,6 +267,4 @@ router.get('/portfolio-history', auth, async (req, res) => {
   }
 });
 
-
-   
 module.exports = router;

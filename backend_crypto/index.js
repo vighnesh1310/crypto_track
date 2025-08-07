@@ -13,7 +13,8 @@ app.use(express.json());
 
 // ✅ CORS setup for React frontend (http://localhost:3000)
 app.use(cors({
-  origin: 'https://crypto-track-xi.vercel.app' ||'http://localhost:3000',
+  //origin: 'https://crypto-track-xi.vercel.app' ||'http://localhost:3000',
+  origin: 'http://localhost:3000',
   credentials: true
 }));
 
@@ -21,7 +22,6 @@ app.use(cors({
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/userRoutes');
 const profileRoutes = require('./routes/profile');
-const tradeRoutes = require('./routes/trade');
 const dashboardRoutes = require('./routes/dashboard');
 const watchlistRoutes = require('./routes/watchlist');
 const portfolioRoutes = require('./routes/portfolio');
@@ -32,7 +32,6 @@ const alertRoutes = require('./routes/alerts');
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/profile', profileRoutes);
-app.use('/api/trade', tradeRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/watchlist', watchlistRoutes);
 app.use('/api/portfolio', portfolioRoutes);

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const verifyToken = require('../middleware/auth');
 const Portfolio = require('../models/Portfolio');
+const Transaction = require('../models/Transaction');
 const Alert = require('../models/Alert');
 const Watchlist = require('../models/Watchlist');
 const axios = require('axios');
@@ -11,15 +12,22 @@ router.get('/summary', verifyToken, async (req, res) => {
     const userId = req.user.id;
     const vs_currency = req.query.currency?.toUpperCase() || 'USD';
 
-    const portfolio = await Portfolio.findOne({ user: userId });
-    const alerts = await Alert.find({ user: userId, triggered: true });
-    const watchlist = await Watchlist.findOne({ user: userId });
+    const [portfolio, alerts, watchlist, sellTransactions] = await Promise.all([
+      Portfolio.findOne({ user: userId }),
+      Alert.find({ user: userId, triggered: true }),
+      Watchlist.findOne({ user: userId }),
+      Transaction.find({ user: userId, type: 'sell' })
+    ]);
+
+    const realizedProfit = sellTransactions.reduce((sum, t) => sum + (t.realizedProfit || 0), 0);
 
     if (!portfolio || !portfolio.holdings || portfolio.holdings.length === 0) {
       return res.json({
         totalValue: 0,
         totalInvestment: 0,
-        totalProfit: 0,
+        unrealizedProfit: 0,
+        realizedProfit,
+        totalProfit: realizedProfit,
         totalProfitPercent: 0,
         alerts: alerts.length,
         watchlist: watchlist?.coins?.length || 0,
@@ -28,11 +36,9 @@ router.get('/summary', verifyToken, async (req, res) => {
 
     const holdings = portfolio.holdings;
     const symbols = holdings.map(h => h.symbol?.toUpperCase()).filter(Boolean).join(',');
+
     const priceRes = await axios.get(`https://min-api.cryptocompare.com/data/pricemultifull`, {
-      params: {
-        fsyms: symbols,
-        tsyms: vs_currency
-      }
+      params: { fsyms: symbols, tsyms: vs_currency }
     });
 
     const priceData = priceRes.data?.RAW || {};
@@ -53,20 +59,23 @@ router.get('/summary', verifyToken, async (req, res) => {
       totalInvestment += investmentValue;
     }
 
-    const totalProfit = totalValue - totalInvestment;
-    const totalProfitPercent = totalInvestment > 0
-      ? (totalProfit / totalInvestment) * 100
+    const unrealizedProfit = totalValue - totalInvestment;
+    const totalProfit = unrealizedProfit + realizedProfit;
+
+    const totalProfitPercent = (totalInvestment + realizedProfit) > 0
+      ? (totalProfit / (totalInvestment + realizedProfit)) * 100
       : 0;
 
     res.json({
       totalValue,
       totalInvestment,
+      unrealizedProfit,
+      realizedProfit,
       totalProfit,
       totalProfitPercent,
       alerts: alerts.length,
       watchlist: watchlist?.coins?.length || 0
     });
-
   } catch (err) {
     console.error('Dashboard Summary Error:', err.message);
     res.status(500).json({ error: 'Failed to fetch dashboard summary' });
