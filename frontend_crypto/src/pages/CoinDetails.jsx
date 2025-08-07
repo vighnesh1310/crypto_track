@@ -340,11 +340,15 @@ export function CoinDetail() {
   const handleConfirmAdd = async (quantity) => {
   try {
     await API.post('/portfolio', {
-      coinId: coin.id,
-      symbol: coin.symbol,
-      amount: quantity,
+  coinId: coin.id,
+  symbol: coin.symbol,
+  amount: quantity,
+  type: 'track',
+  image: coin.image?.large,
+  name: coin.name,
+  current_price: coin.market_data?.current_price?.[currency.toLowerCase()] || 0,
+});
 
-    });
 
     toast.success(`${quantity} ${coin.symbol.toUpperCase()} added to your portfolio.`);
   } catch (error) {

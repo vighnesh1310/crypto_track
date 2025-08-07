@@ -2,30 +2,39 @@ import React, { useState, useEffect } from 'react';
 
 export function SellModal({ isOpen, onClose, coin, onSell }) {
   const [quantity, setQuantity] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    if (!isOpen) setQuantity('');
+    if (!isOpen) {
+      setQuantity('');
+      setError('');
+      setSuccess('');
+    }
   }, [isOpen]);
 
   const handleSell = async () => {
     const qty = parseFloat(quantity);
+    setError('');
+    setSuccess('');
+
     if (!qty || qty <= 0) {
-      alert('Enter a valid quantity.');
+      setError('Enter a valid quantity.');
       return;
     }
 
     if (qty > coin.quantity) {
-      alert('You cannot sell more than you hold.');
+      setError('You cannot sell more than you hold.');
       return;
     }
 
     try {
-      await onSell(coin.id, qty, coin.symbol, coin.current_price); // 👈 passes all to backend
-      alert(`Successfully sold ${qty} ${coin.name}`);
+      await onSell(coin.id, qty, coin.symbol, coin.current_price);
+      setSuccess(`Successfully sold ${qty} ${coin.name}`);
       onClose();
     } catch (err) {
       console.error('Sell error:', err);
-      alert('Failed to sell.');
+      setError('Failed to sell.');
     }
   };
 
@@ -36,6 +45,8 @@ export function SellModal({ isOpen, onClose, coin, onSell }) {
       <div className="bg-white dark:bg-gray-800 p-6 rounded-xl w-full max-w-sm shadow-lg">
         <h2 className="text-lg font-bold mb-4">Sell {coin.name}</h2>
         <p className="mb-2 text-sm text-gray-500">You hold: {coin.quantity}</p>
+        {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+        {success && <p className="text-green-500 text-sm mb-2">{success}</p>}
         <input
           type="number"
           value={quantity}
@@ -43,7 +54,7 @@ export function SellModal({ isOpen, onClose, coin, onSell }) {
           placeholder="Enter quantity to sell"
           min="0"
           max={coin.quantity}
-          className="w-full p-2 border border-gray-300 rounded mb-4"
+          className="w-full px-4 py-2 border rounded dark:bg-gray-700 dark:text-white mb-4"
         />
         <div className="flex justify-end space-x-2">
           <button

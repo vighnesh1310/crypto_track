@@ -23,39 +23,44 @@ export const SummaryCards = () => {
 
   useEffect(() => {
     loadCoinData();
-  }, [currency]); // refetch on currency change
+  }, [currency]);
 
-  if (loading) return <div>Loading summary...</div>;
+  if (loading) return <div className="px-4">Loading summary...</div>;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 px-4">
-      <div className="bg-white dark:bg-gray-900 shadow-md p-4 rounded-2xl">
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Total Value</p>
-        <p className="text-lg font-semibold text-gray-800 dark:text-white">
-          {formatCurrency(summary?.totalValue, currency)}
-        </p>
-      </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-4">
+      <SummaryCard title="Total Value" value={summary?.totalValue} currency={currency} />
+      <SummaryCard title="Total Investment" value={summary?.totalInvestment} currency={currency} />
+      <SummaryCard title="Unrealized Profit" value={summary?.unrealizedProfit} currency={currency} isProfit />
+      <SummaryCard title="Realized Profit" value={summary?.realizedProfit} currency={currency} isProfit />
+      <SummaryCard title="Total Profit" value={summary?.totalProfit} currency={currency} isProfit />
+      <SummaryCard
+        title="Profit %"
+        value={`${summary?.totalProfitPercent?.toFixed(2)}%`}
+        isPercent
+        highlight={summary?.totalProfitPercent >= 0}
+      />
+    </div>
+  );
+};
 
-      <div className="bg-white dark:bg-gray-900 shadow-md p-4 rounded-2xl">
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Total Investment</p>
-        <p className="text-lg font-semibold text-gray-800 dark:text-white">
-          {formatCurrency(summary?.totalInvestment, currency)}
-        </p>
-      </div>
+const SummaryCard = ({ title, value, currency, isProfit = false, isPercent = false, highlight = null }) => {
+  const displayValue = isPercent ? value : formatCurrency(value ?? 0, currency);
+  const color =
+    highlight === null
+      ? isProfit
+        ? value >= 0 ? 'text-green-600' : 'text-red-500'
+        : 'text-gray-800 dark:text-white'
+      : highlight
+        ? 'text-green-600'
+        : 'text-red-500';
 
-      <div className="bg-white dark:bg-gray-900 shadow-md p-4 rounded-2xl">
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Total Profit</p>
-        <p className="text-lg font-semibold text-green-600">
-          {formatCurrency(summary?.totalProfit, currency)}
-        </p>
-      </div>
-
-      <div className="bg-white dark:bg-gray-900 shadow-md p-4 rounded-2xl">
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Profit %</p>
-        <p className={`text-lg font-semibold ${summary?.totalProfitPercent >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-          {summary?.totalProfitPercent?.toFixed(2)}%
-        </p>
-      </div>
+  return (
+    <div className="bg-white dark:bg-gray-900 shadow-md p-4 rounded-2xl">
+      <p className="text-gray-500 dark:text-gray-400 text-sm">{title}</p>
+      <p className={`text-lg font-semibold ${color}`}>
+        {displayValue}
+      </p>
     </div>
   );
 };

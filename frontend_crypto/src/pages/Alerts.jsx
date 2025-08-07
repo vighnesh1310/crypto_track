@@ -1,15 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import axiosInstance from '../utils/axiosInstance';
+import axios from 'axios';
 import { Sidebar } from '../components/Sidebar';
 import { Topbar } from '../components/Topbar';
 import { useSidebar } from '../context/SidebarContext';
+
+const SOUND_URL = '/alert.wav'; // Ensure this file exists in the public folder
 
 export function Alerts() {
   const [alerts, setAlerts] = useState([]);
   const [coin, setCoin] = useState('');
   const [target, setTarget] = useState('');
   const { isOpen } = useSidebar();
+
+  // Ask for notification permission on load
+  useEffect(() => {
+    if (Notification.permission !== 'granted') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   const fetchAlerts = async () => {
     try {
@@ -24,9 +34,56 @@ export function Alerts() {
     fetchAlerts();
   }, []);
 
+  // Poll CryptoCompare prices
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (!alerts.length) return;
+
+      const symbols = alerts.map((a) => a.coin.toUpperCase()).join(',');
+
+      try {
+        const res = await axios.get(
+          `https://min-api.cryptocompare.com/data/pricemulti?fsyms=${symbols}&tsyms=USD`
+        );
+
+        alerts.forEach((alert) => {
+          const coinSymbol = alert.coin.toUpperCase();
+          const current = res.data[coinSymbol]?.USD;
+          if (!current) return;
+
+          const triggered = current >= alert.target;
+          if (triggered) {
+            playSound();
+            showNotification(coinSymbol, current, alert.target);
+            toast.success(`${coinSymbol} hit $${current}`);
+            // Optionally mark alert as triggered or delete
+          }
+        });
+      } catch (err) {
+        console.warn('CryptoCompare price fetch failed:', err.message);
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [alerts]);
+
+  const playSound = () => {
+    const audio = new Audio(SOUND_URL);
+    audio.play();
+  };
+
+  const showNotification = (coin, current, target) => {
+    if (Notification.permission === 'granted') {
+      new Notification('💰 Price Alert Triggered', {
+        body: `${coin} hit $${current} (Target: $${target})`,
+        icon: '/favicon.ico',
+      });
+    }
+  };
+
   const addAlert = async (e) => {
     e.preventDefault();
-    const trimmedCoin = coin.trim().toLowerCase();
+    const trimmedCoin = coin.trim().toUpperCase();
     const targetPrice = parseFloat(target);
 
     if (!trimmedCoin || isNaN(targetPrice) || targetPrice <= 0) {
@@ -51,9 +108,8 @@ export function Alerts() {
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
       <Sidebar />
-    <div className={`flex-1 transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-16'} flex flex-col`}>
+      <div className={`flex-1 transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-16'} flex flex-col`}>
         <Topbar />
-
         <main className="p-6 max-w-3xl mx-auto w-full">
           <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
             🔔 Price Alerts
@@ -63,7 +119,7 @@ export function Alerts() {
             <input
               value={coin}
               onChange={(e) => setCoin(e.target.value)}
-              placeholder="Coin ID (e.g. bitcoin)"
+              placeholder="Coin Symbol (e.g. BTC)"
               className="border p-2 w-full rounded bg-white dark:bg-gray-800 dark:text-white"
             />
             <input

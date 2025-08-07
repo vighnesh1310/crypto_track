@@ -22,7 +22,7 @@ import {
   PointElement,
   LineElement,
 } from 'chart.js';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Papa from 'papaparse';
 import { saveAs } from 'file-saver';
@@ -129,11 +129,11 @@ export function Portfolio() {
         type: 'buy',
       });
 
-      alert(`Bought ${quantityToBuy} ${coin.symbol}`);
+      toast.success(`Bought ${quantityToBuy} ${coin.symbol}`);
       await fetchPortfolio();
     } catch (err) {
       console.error('Buy failed:', err);
-      alert(err.response?.data?.error || 'Buy failed');
+      toast.error(err.response?.data?.error || 'Buy failed');
     } finally {
       setSelectedCoin(null);
       setIsModalOpen(false);
@@ -279,7 +279,7 @@ export function Portfolio() {
             <Transaction />
           </div>
 
-          <ToastContainer />
+         
 
           <BuyModal
             coin={selectedCoin}

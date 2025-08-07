@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog } from '@headlessui/react';
+import { toast } from 'react-toastify';
 
 export function BuyModal({ isOpen, onClose, coin, onBuy }) {
   const [quantity, setQuantity] = useState('');
@@ -11,7 +11,7 @@ export function BuyModal({ isOpen, onClose, coin, onBuy }) {
   const handleBuy = () => {
     const qty = parseFloat(quantity);
     if (!qty || qty <= 0) {
-      alert('Enter a valid quantity.');
+      toast.error('Enter a valid quantity.');
       return;
     }
     onBuy(coin.id, qty); // ✅ Let the parent handle the actual logic
@@ -30,7 +30,7 @@ export function BuyModal({ isOpen, onClose, coin, onBuy }) {
           onChange={(e) => setQuantity(e.target.value)}
           placeholder="Enter quantity"
           min="0"
-          className="w-full p-2 border border-gray-300 rounded mb-4"
+          className="w-full px-4 py-2 border rounded dark:bg-gray-700 dark:text-white mb-4"
         />
         <div className="flex justify-end space-x-2">
           <button

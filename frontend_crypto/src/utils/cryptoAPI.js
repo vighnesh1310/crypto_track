@@ -15,7 +15,7 @@ const fetchCoinList = async () => {
 
 // ✅ Fetch market data from your backend and enrich with full names
 export const fetchMarketData = async (vs_currency = 'USD') => {
-  const marketRes = await axios.get(`https://crypto-track-dbno.onrender.com/api/market?vs_currency=${vs_currency}`);
+  const marketRes = await axios.get(`http://localhost:5000/api/market?vs_currency=${vs_currency}`);
   const rawData = marketRes.data;
 
   const coinList = await fetchCoinList();
@@ -110,4 +110,25 @@ export const fetchCoinDetails = async (symbol = 'BTC', currency = 'USD') => {
     },
     description: { en: '' }
   };
+};
+
+// 🗞️ Fetch live crypto news from CryptoCompare
+export const fetchCryptoNews = async (category = 'BTC,ETH,NFT,Blockchain', lang = 'EN', limit = 5) => {
+  try {
+    const response = await axios.get('https://min-api.cryptocompare.com/data/v2/news/', {
+      params: {
+        lang,
+        categories: category,
+        l: limit,
+      },
+      headers: {
+        authorization: `Apikey ${API_KEY}`,
+      },
+    });
+
+    return response.data.Data;
+  } catch (err) {
+    console.error('❌ Error fetching crypto news:', err.message);
+    return [];
+  }
 };

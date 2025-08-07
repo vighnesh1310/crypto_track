@@ -100,8 +100,9 @@ export const WalletOverview = () => {
   const fetchWallet = async () => {
     try {
       const res = await axiosInstance.get('/portfolio', {
-        params: { currency: currency.toLowerCase() },
+      params: { currency: currency.toLowerCase(), type: 'buy' }, // ✅ only real holdings
       });
+
 
       const walletArray = Array.isArray(res.data)
         ? res.data
