@@ -15,7 +15,7 @@ const fetchCoinList = async () => {
 
 // ✅ Fetch market data from your backend and enrich with full names
 export const fetchMarketData = async (vs_currency = 'USD') => {
-  const marketRes = await axios.get(`http://localhost:5000/api/market?vs_currency=${vs_currency}`);
+  const marketRes = await axios.get(`https://crypto-track-dbno.onrender.com/api/market?vs_currency=${vs_currency}`);
   const rawData = marketRes.data;
 
   const coinList = await fetchCoinList();
