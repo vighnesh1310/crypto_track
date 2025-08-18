@@ -8,6 +8,10 @@ dotenv.config();
 
 const app = express();
 
+// 🚀 Increase limit to 10MB or more
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 // Middleware
 app.use(express.json());
 
@@ -27,6 +31,8 @@ const watchlistRoutes = require('./routes/watchlist');
 const portfolioRoutes = require('./routes/portfolio');
 const marketRoute = require('./routes/market');
 const alertRoutes = require('./routes/alerts');
+const paymentsRoutes = require('./routes/payments');
+
 
 
 app.use('/api/auth', authRoutes);
@@ -37,6 +43,7 @@ app.use('/api/watchlist', watchlistRoutes);
 app.use('/api/portfolio', portfolioRoutes);
 app.use('/api/market', marketRoute);
 app.use('/api/alerts', alertRoutes);
+app.use('/api/payments', paymentsRoutes);
 
 // Root endpoint for testing
 app.get('/', (req, res) => {

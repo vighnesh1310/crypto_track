@@ -80,11 +80,13 @@ router.post('/', auth, async (req, res) => {
         coinId,
         symbol,
         quantity: amount,
+        averageBuyPrice: type === 'buy' ? current_price : 0,
         type,
         image,
         name,
         current_price,
-      });
+     });
+
     }
 
     await portfolio.save();
@@ -120,52 +122,64 @@ router.post('/update', auth, async (req, res) => {
     const index = portfolio.holdings.findIndex(h => h.coinId === coinId);
 
     if (type === 'buy') {
-      if (index >= 0) {
-        const existing = portfolio.holdings[index];
-        const totalCost = (existing.averageBuyPrice || 0) * existing.quantity + price * quantity;
-        const newQuantity = existing.quantity + quantity;
+  if (index >= 0) {
+    const existing = portfolio.holdings[index];
+    const totalCost = (existing.averageBuyPrice || 0) * existing.quantity + price * quantity;
+    const newQuantity = existing.quantity + quantity;
 
-        portfolio.holdings[index].quantity = newQuantity;
-        portfolio.holdings[index].averageBuyPrice = totalCost / newQuantity;
-        portfolio.holdings[index].type = 'buy';
-      } else {
-        portfolio.holdings.push({
-          coinId,
-          symbol,
-          quantity,
-          averageBuyPrice: price,
-          type: 'buy'
-        });
-      }
-    } else if (type === 'sell') {
-      if (index === -1 || portfolio.holdings[index].quantity < quantity) {
-        return res.status(400).json({ error: 'Insufficient quantity to sell.' });
-      }
+    portfolio.holdings[index].quantity = newQuantity;
+    portfolio.holdings[index].averageBuyPrice = totalCost / newQuantity;
+    portfolio.holdings[index].type = 'buy';
+  } else {
+    portfolio.holdings.push({
+      coinId,
+      symbol,
+      quantity,
+      averageBuyPrice: price,
+      type: 'buy',
+    });
+  }
 
-      const avgPrice = portfolio.holdings[index].averageBuyPrice || 0;
-      const currentQty = portfolio.holdings[index].quantity;
+  // ✅ Log the BUY transaction
+  await Transaction.create({
+    user: userId,
+    coinId,
+    symbol,
+    type: 'buy',
+    quantity,
+    price,
+  });
 
-      // Deduct quantity
-      portfolio.holdings[index].quantity -= quantity;
+} else if (type === 'sell') {
+  if (index === -1 || portfolio.holdings[index].quantity < quantity) {
+    return res.status(400).json({ error: 'Insufficient quantity to sell.' });
+  }
 
-      // Calculate realized profit
-      const realizedProfit = (price - avgPrice) * quantity;
+  const avgPrice = portfolio.holdings[index].averageBuyPrice || 0;
+  const currentQty = portfolio.holdings[index].quantity;
 
-      // Remove if zero
-      if (portfolio.holdings[index].quantity === 0) {
-        portfolio.holdings.splice(index, 1);
-      }
+  // Deduct quantity
+  portfolio.holdings[index].quantity -= quantity;
 
-      await Transaction.create({
-        user: userId,
-        coinId,
-        symbol,
-        type: 'sell',
-        quantity,
-        price,
-        realizedProfit,
-      });
-    }
+  // Calculate realized profit
+  const realizedProfit = (price - avgPrice) * quantity;
+
+  // Remove if zero
+  if (portfolio.holdings[index].quantity === 0) {
+    portfolio.holdings.splice(index, 1);
+  }
+
+  // ✅ Log the SELL transaction
+  await Transaction.create({
+    user: userId,
+    coinId,
+    symbol,
+    type: 'sell',
+    quantity,
+    price,
+    realizedProfit,
+  });
+}
 
     await portfolio.save();
 

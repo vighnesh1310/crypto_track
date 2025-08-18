@@ -6,7 +6,8 @@ const HoldingSchema = new mongoose.Schema({
   name: String,
   image: String,
   current_price: Number,
-  quantity: Number,
+  quantity: { type: Number, default: 0 },
+  averageBuyPrice: { type: Number, default: 0 }, // 👈 NEW FIELD
   type: {
     type: String,
     enum: ['buy', 'track'],

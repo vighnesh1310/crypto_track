@@ -35,8 +35,9 @@ router.get('/summary', verifyToken, async (req, res) => {
     }
 
     const holdings = portfolio.holdings;
-    const symbols = holdings.map(h => h.symbol?.toUpperCase()).filter(Boolean).join(',');
+    const buyHoldings = holdings.filter(h => h.type === 'buy');
 
+    const symbols = [...new Set(buyHoldings.map(h => h.symbol?.toUpperCase()).filter(Boolean))].join(',');
     const priceRes = await axios.get(`https://min-api.cryptocompare.com/data/pricemultifull`, {
       params: { fsyms: symbols, tsyms: vs_currency }
     });
@@ -46,7 +47,7 @@ router.get('/summary', verifyToken, async (req, res) => {
     let totalValue = 0;
     let totalInvestment = 0;
 
-    for (const h of holdings) {
+    for (const h of buyHoldings) {
       const symbol = h.symbol?.toUpperCase();
       const quantity = h.quantity || 0;
       const avgPrice = h.averageBuyPrice || 0;
@@ -76,6 +77,7 @@ router.get('/summary', verifyToken, async (req, res) => {
       alerts: alerts.length,
       watchlist: watchlist?.coins?.length || 0
     });
+
   } catch (err) {
     console.error('Dashboard Summary Error:', err.message);
     res.status(500).json({ error: 'Failed to fetch dashboard summary' });
