@@ -7,6 +7,8 @@ import { useSidebar } from '../context/SidebarContext';
 import { StarOff } from 'lucide-react';
 import { Footer } from '../components/Footer';
 import { motion } from 'framer-motion';
+import { toast } from "react-toastify";
+
 
 export function Watchlist() {
   const [watchlist, setWatchlist] = useState([]);
@@ -51,14 +53,25 @@ export function Watchlist() {
   }, [watchlist]);
 
   const removeFromWatchlist = async (coinId) => {
-    try {
-      const res = await API.put('/watchlist', { coinId, action: 'remove' });
-      const updated = res.data.watchlist.map((symbol) => symbol.toLowerCase());
-      setWatchlist(updated);
-    } catch (err) {
-      console.error('❌ Failed to update watchlist:', err);
-    }
-  };
+  const normalizedId = coinId.toLowerCase();
+
+  // ✅ Optimistically remove from both lists
+  setWatchlist((prev) => prev.filter((id) => id !== normalizedId));
+  setCoinData((prev) => prev.filter((coin) => coin.id.toLowerCase() !== normalizedId));
+
+  // ✅ Show success toast instantly
+  toast.success("✅ Removed from Watchlist");
+
+  try {
+    await API.put("/watchlist", { coinId: normalizedId, action: "remove" });
+  } catch (err) {
+    console.error("❌ Failed to update watchlist:", err);
+    toast.error("⚠️ Failed to remove. Please try again.");
+    // Rollback if API fails
+    loadWatchlist();
+  }
+};
+
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -116,13 +129,17 @@ export function Watchlist() {
                       </div>
                     </div>
                     <motion.button
-                      onClick={() => removeFromWatchlist(coin.id)}
-                      whileTap={{ rotate: 20, scale: 0.9 }}
-                      className="text-red-500 hover:text-red-700"
-                      title="Remove from Watchlist"
-                    >
-                      <StarOff />
-                    </motion.button>
+  onClick={() => {
+    console.log("🟢 Remove clicked:", coin.id);
+    removeFromWatchlist(coin.id);
+  }}
+  whileTap={{ rotate: 20, scale: 0.9 }}
+  className="p-2 rounded-full text-red-500 hover:text-red-700"
+  title="Remove from Watchlist"
+>
+  <StarOff className="w-5 h-5 pointer-events-none" />
+</motion.button>
+
                   </div>
                   <div className="mt-2 text-gray-700 dark:text-gray-200">
                     <p>Price: ₹{coin.current_price?.toLocaleString()}</p>

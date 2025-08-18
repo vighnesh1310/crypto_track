@@ -48,11 +48,6 @@ export const fetchMarketData = async (vs_currency = 'USD') => {
 };
 
 
-// 🚀 Fetch trending coins from CoinGecko (optional)
-export const fetchTrendingCoins = async () => {
-  const response = await axios.get('https://api.coingecko.com/api/v3/search/trending');
-  return response.data.coins;
-};
 
 // 📈 Fetch historical prices using CryptoCompare
 export const fetchCoinHistory = async (symbol = 'BTC', days = 7, currency = 'USD') => {
