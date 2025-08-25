@@ -11,12 +11,13 @@ export function Login() {
   const [remember, setRemember] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({ email: '', password: '', general: '' });
 
   const navigate = useNavigate();
   const location = useLocation();
   const { setUser } = useUser();
 
-  const from = location.state?.from || '/dashboard'; // redirect after login
+  const from = location.state?.from || '/dashboard';
 
   useEffect(() => {
     const savedEmail = localStorage.getItem('rememberedEmail');
@@ -26,11 +27,13 @@ export function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setErrors({ email: '', password: '', general: '' }); // reset errors
+
     try {
       const res = await API.post('/auth/login', { email, password });
 
       localStorage.setItem('token', res.data.token);
-      setUser(res.data.user); // ✅ update user context
+      setUser(res.data.user);
 
       if (remember) {
         localStorage.setItem('rememberedEmail', email);
@@ -39,10 +42,27 @@ export function Login() {
       }
 
       toast.success('✅ Login successful! Redirecting...');
-      navigate(from, { replace: true }); // ✅ redirect to original route
+      navigate(from, { replace: true });
     } catch (err) {
-      console.error('Login error:', err.response);
-      toast.error(err.response?.data?.error || 'Login failed. Please try again.');
+      console.error("Login error:", err.response);
+
+      if (err.response) {
+        const { status, data } = err.response;
+
+        if (status === 401) {
+          setErrors((prev) => ({ ...prev, password: '❌ Invalid credentials' }));
+          toast.error('❌ Invalid email or password.');
+        } else if (status === 404) {
+          setErrors((prev) => ({ ...prev, email: '❌ User not found. Please register first.' }));
+          toast.error('❌ User not found. Please register first.');
+        } else {
+          setErrors((prev) => ({ ...prev, general: data.error || data.msg || data.message || 'Login failed. Try again.' }));
+          toast.error(data.error || data.msg || data.message || 'Login failed. Try again.');
+        }
+      } else {
+        setErrors((prev) => ({ ...prev, general: '⚠️ Network error. Please check your connection.' }));
+        toast.error('⚠️ Network error. Please check your connection.');
+      }
     } finally {
       setLoading(false);
     }
@@ -59,25 +79,45 @@ export function Login() {
         <h2 className="text-3xl font-extrabold text-center text-white mb-6">
           🔐 Welcome Back
         </h2>
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="email"
-            placeholder="📧 Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full p-3 rounded bg-white/10 text-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-          />
+          {/* Email */}
+          <motion.div
+            animate={errors.email ? { x: [-10, 10, -10, 10, 0] } : {}}
+            transition={{ duration: 0.4 }}
+          >
+            <input
+              type="email"
+              placeholder="📧 Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className={`w-full p-3 rounded bg-white/10 text-white border 
+                ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-white/20 focus:ring-indigo-500'}
+                focus:outline-none focus:ring-2 transition`}
+            />
+            {errors.email && <p className="text-red-400 text-sm mt-1">{errors.email}</p>}
+          </motion.div>
 
-          <input
-            type={showPassword ? 'text' : 'password'}
-            placeholder="🔒 Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full p-3 rounded bg-white/10 text-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-          />
+          {/* Password */}
+          <motion.div
+            animate={errors.password ? { x: [-10, 10, -10, 10, 0] } : {}}
+            transition={{ duration: 0.4 }}
+          >
+            <input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="🔒 Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className={`w-full p-3 rounded bg-white/10 text-white border 
+                ${errors.password ? 'border-red-500 focus:ring-red-500' : 'border-white/20 focus:ring-indigo-500'}
+                focus:outline-none focus:ring-2 transition`}
+            />
+            {errors.password && <p className="text-red-400 text-sm mt-1">{errors.password}</p>}
+          </motion.div>
 
+          {/* Remember & Show Password */}
           <div className="flex justify-between items-center text-sm text-white">
             <label className="flex gap-2 items-center">
               <input
@@ -96,6 +136,10 @@ export function Login() {
             </button>
           </div>
 
+          {/* General error */}
+          {errors.general && <p className="text-red-400 text-sm text-center">{errors.general}</p>}
+
+          {/* Submit button */}
           <button
             type="submit"
             disabled={loading}

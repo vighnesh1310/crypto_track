@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import axiosInstance from '../utils/axiosInstance';
 import { Topbar } from '../components/Topbar';
@@ -7,7 +6,6 @@ import { fetchMarketData } from '../utils/cryptoAPI';
 import { Sidebar } from '../components/Sidebar';
 import { BuyModal } from '../components/BuyModal';
 import { useSidebar } from '../context/SidebarContext';
-import { calculatePortfolioStats } from '../utils/portfolioUtils';
 import { useCurrency } from '../context/CurrencyContext';
 import { Pie, Line } from 'react-chartjs-2';
 import { SellModal } from '../components/SellModal';
@@ -55,10 +53,15 @@ export function Portfolio() {
       maximumFractionDigits: 2,
     }).format(amount);
 
+  // 🔥 fetch portfolio & filter out zero qty holdings
   const fetchPortfolio = async () => {
     try {
       const res = await axiosInstance.get('/portfolio');
-      const userHoldings = Array.isArray(res.data) ? res.data : [];
+
+      const userHoldings = Array.isArray(res.data)
+        ? res.data.filter((h) => h.quantity > 0)
+        : [];
+
       setHoldings(userHoldings);
 
       const coinIds = userHoldings.map((h) => h.coinId.toLowerCase());
@@ -73,7 +76,9 @@ export function Portfolio() {
       }
     } catch (err) {
       console.error('Error fetching portfolio:', err);
-      toast.error(`Failed to load portfolio: ${err.response?.data?.message || 'Network error'}`);
+      toast.error(
+        `Failed to load portfolio: ${err.response?.data?.message || 'Network error'}`
+      );
     } finally {
       setIsLoading(false);
     }
@@ -86,7 +91,9 @@ export function Portfolio() {
   }, [currency]);
 
   const getQuantity = (coinId) => {
-    const holding = holdings.find((h) => h.coinId.toLowerCase() === coinId.toLowerCase());
+    const holding = holdings.find(
+      (h) => h.coinId.toLowerCase() === coinId.toLowerCase()
+    );
     return holding ? holding.quantity || 0 : 0;
   };
 
@@ -99,26 +106,38 @@ export function Portfolio() {
 
   const handleSell = async (coinId, quantity, symbol, price) => {
     try {
-      await axiosInstance.post('/portfolio/update', {
+      const res = await axiosInstance.post('/portfolio/update', {
         coinId,
         symbol,
         quantity,
         price,
         type: 'sell',
       });
+
       toast.success(`Sold ${quantity} ${symbol}`);
+
+      // 🔥 Update holdings immediately from response
+      setHoldings(res.data.holdings.filter((h) => h.quantity > 0));
       await fetchPortfolio();
     } catch (err) {
       console.error(`Sell error for ${coinId}:`, err);
       toast.error(
-        `Failed to sell ${coinId}: ${err.response?.data?.error || 'Network error'}`
+        `Failed to sell ${coinId}: ${
+          err.response?.data?.error || 'Network error'
+        }`
       );
+    } finally {
+      setSelectedCoin(null);
+      setIsModalOpen(false);
     }
   };
 
   const handleBuy = async (coinId, quantityToBuy) => {
     const coin = marketData.find((c) => c.id === coinId);
-    if (!coin) return alert('Coin not found');
+    if (!coin) {
+      toast.error('Coin not found in market data');
+      return;
+    }
 
     try {
       await axiosInstance.post('/portfolio/update', {
@@ -158,41 +177,59 @@ export function Portfolio() {
     saveAs(blob, 'portfolio.csv');
   };
 
-  const pieData = useMemo(() => ({
-    labels: marketData.map((coin) => coin.name),
-    datasets: [
-      {
-        label: 'Value',
-        data: marketData.map((coin) => getQuantity(coin.id) * coin.current_price),
-        backgroundColor: marketData.map((_, i) =>
-          `hsl(${(i * 45) % 360}, 70%, 60%)`
-        ),
-        borderWidth: 1,
-      },
-    ],
-  }), [marketData, holdings]);
+  const pieData = useMemo(
+    () => ({
+      labels: marketData.map((coin) => coin.name),
+      datasets: [
+        {
+          label: 'Value',
+          data: marketData.map(
+            (coin) => getQuantity(coin.id) * coin.current_price
+          ),
+          backgroundColor: marketData.map(
+            (_, i) => `hsl(${(i * 45) % 360}, 70%, 60%)`
+          ),
+          borderWidth: 1,
+        },
+      ],
+    }),
+    [marketData, holdings]
+  );
 
-  const lineData = useMemo(() => ({
-    labels: marketData.map((coin) => coin.name),
-    datasets: [
-      {
-        label: 'Holding Value',
-        data: marketData.map((coin) => getQuantity(coin.id) * coin.current_price),
-        borderColor: '#14b8a6',
-        backgroundColor: 'rgba(20, 184, 166, 0.2)',
-        tension: 0.4,
-      },
-    ],
-  }), [marketData, holdings]);
+  const lineData = useMemo(
+    () => ({
+      labels: marketData.map((coin) => coin.name),
+      datasets: [
+        {
+          label: 'Holding Value',
+          data: marketData.map(
+            (coin) => getQuantity(coin.id) * coin.current_price
+          ),
+          borderColor: '#14b8a6',
+          backgroundColor: 'rgba(20, 184, 166, 0.2)',
+          tension: 0.4,
+        },
+      ],
+    }),
+    [marketData, holdings]
+  );
 
   if (isLoading) {
-    return <div className="text-center p-6 text-gray-600 dark:text-gray-300">Loading portfolio...</div>;
+    return (
+      <div className="text-center p-6 text-gray-600 dark:text-gray-300">
+        Loading portfolio...
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-white flex">
       <Sidebar />
-      <div className={`flex-1 transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-16'} flex flex-col`}>
+      <div
+        className={`flex-1 transition-all duration-300 ${
+          isOpen ? 'ml-64' : 'ml-16'
+        } flex flex-col`}
+      >
         <Topbar />
         <div className="flex-1 px-4 sm:px-8 py-8">
           <h2 className="text-3xl font-bold mb-4">📊 My Portfolio</h2>
@@ -208,7 +245,9 @@ export function Portfolio() {
           </button>
 
           {marketData.length === 0 ? (
-            <div className="text-gray-500 dark:text-gray-400">No coins in your portfolio.</div>
+            <div className="text-gray-500 dark:text-gray-400">
+              No coins in your portfolio.
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {marketData.map((coin) => {
@@ -220,10 +259,18 @@ export function Portfolio() {
                     className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md transition hover:scale-[1.01]"
                   >
                     <div className="flex items-center gap-4 min-w-[150px]">
-                      <img src={coin.image} alt={`${coin.name} logo`} className="w-10 h-10" />
+                      <img
+                        src={coin.image}
+                        alt={`${coin.name} logo`}
+                        className="w-10 h-10"
+                      />
                       <div>
-                        <div className="font-semibold text-lg">{coin.name}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">Qty: {quantity}</div>
+                        <div className="font-semibold text-lg">
+                          {coin.name}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          Qty: {quantity}
+                        </div>
                       </div>
                     </div>
 
@@ -241,15 +288,17 @@ export function Portfolio() {
                         >
                           Buy
                         </button>
-                        <button
-                          onClick={() => {
-                            setCoinToSell({ ...coin, quantity });
-                            setIsSellModalOpen(true);
-                          }}
-                          className="w-full sm:w-auto px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded"
-                        >
-                          Sell
-                        </button>
+                        {quantity > 0 && (
+                          <button
+                            onClick={() => {
+                              setCoinToSell({ ...coin, quantity });
+                              setIsSellModalOpen(true);
+                            }}
+                            className="w-full sm:w-auto px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded"
+                          >
+                            Sell
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -261,15 +310,25 @@ export function Portfolio() {
           {marketData.length > 0 && (
             <div className="grid md:grid-cols-2 gap-6 mt-10">
               <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md min-h-[400px]">
-                <h3 className="text-lg font-semibold mb-4">💹 Portfolio Breakdown</h3>
+                <h3 className="text-lg font-semibold mb-4">
+                  💹 Portfolio Breakdown
+                </h3>
                 <div className="relative h-[300px] w-full">
-                  <Pie data={pieData} options={{ responsive: true, maintainAspectRatio: false }} />
+                  <Pie
+                    data={pieData}
+                    options={{ responsive: true, maintainAspectRatio: false }}
+                  />
                 </div>
               </div>
               <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md min-h-[400px]">
-                <h3 className="text-lg font-semibold mb-4">📈 Holdings Chart</h3>
+                <h3 className="text-lg font-semibold mb-4">
+                  📈 Holdings Chart
+                </h3>
                 <div className="relative h-[300px] w-full">
-                  <Line data={lineData} options={{ responsive: true, maintainAspectRatio: false }} />
+                  <Line
+                    data={lineData}
+                    options={{ responsive: true, maintainAspectRatio: false }}
+                  />
                 </div>
               </div>
             </div>
@@ -278,8 +337,6 @@ export function Portfolio() {
           <div className="mt-10">
             <Transaction />
           </div>
-
-         
 
           <BuyModal
             coin={selectedCoin}
@@ -299,6 +356,7 @@ export function Portfolio() {
               setIsSellModalOpen(false);
             }}
             onSell={handleSell}
+            getQuantity={getQuantity}
           />
         </div>
         <Footer />

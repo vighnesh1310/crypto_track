@@ -30,7 +30,7 @@ export function Settings({ inModal = false }) {
       setUser(res.data);
       setSettings(res.data.settings || settings);
     } catch (err) {
-      toast.error('Failed to load settings');
+      toast.error('Failed to load settings', { autoClose: 2000 });
     } finally {
       setLoading(false);
     }
@@ -45,15 +45,17 @@ export function Settings({ inModal = false }) {
   };
 
   const handleUpdate = async () => {
-  try {
-    const res = await API.put('/user/settings', settings);
-    setUser((prev) => ({ ...prev, settings: res.data.settings }));
-    setCurrency(res.data.settings.defaultCurrency); // ✅ update context
-    toast.success('Settings updated');
-  } catch (err) {
-    toast.error('Failed to update settings');
-  }
-};
+    try {
+      const res = await API.put('/user/settings', settings);
+      setUser((prev) => ({ ...prev, settings: res.data.settings }));
+      setCurrency(res.data.settings.defaultCurrency); // ✅ update currency context
+
+      toast.success('Settings updated', { autoClose: 1500 });
+      // ✅ No need to reload — contexts trigger re-render across app
+    } catch (err) {
+      toast.error('Failed to update settings', { autoClose: 2000 });
+    }
+  };
 
   if (loading) {
     return (

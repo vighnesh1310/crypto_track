@@ -8,6 +8,7 @@ import { useCurrency } from '../context/CurrencyContext';
 export function MarketTable() {
   const [coins, setCoins] = useState([]);
   const { currency } = useCurrency();
+  const [isLoading, setIsLoading] = useState(true);
 
   const currencySymbols = {
     usd: '$',
@@ -20,8 +21,26 @@ export function MarketTable() {
   }, []);
 
   useEffect(() => {
-    fetchMarketData(currency, 10, true).then(setCoins);
+    setIsLoading(true); // ✅ reset before fetching
+    fetchMarketData(currency, 10, true)
+      .then((data) => {
+        setCoins(data || []);
+      })
+      .catch((err) => {
+        console.error("Error fetching market data:", err);
+      })
+      .finally(() => {
+        setIsLoading(false); // ✅ stop loading after fetch
+      });
   }, [currency]);
+
+  if (isLoading) {
+    return (
+      <div className="text-center p-6 text-gray-600 dark:text-gray-300">
+        Loading cryptos...
+      </div>
+    );
+  }
 
   return (
     <section className="mt-16" data-aos="fade-up">
