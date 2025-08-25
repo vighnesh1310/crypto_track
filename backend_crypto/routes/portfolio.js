@@ -16,8 +16,11 @@ router.get('/', auth, async (req, res) => {
     const portfolio = await Portfolio.findOne({ user: req.user.id });
     let holdings = portfolio?.holdings || [];
 
+    // ✅ Default: show only BUY holdings
     if (type) {
       holdings = holdings.filter((h) => h.type === type);
+    } else {
+      holdings = holdings.filter((h) => h.type === 'buy');
     }
 
     if (holdings.length === 0) return res.json([]);
@@ -48,6 +51,7 @@ router.get('/', auth, async (req, res) => {
     res.status(500).json({ error: 'Server error while fetching portfolio.' });
   }
 });
+
 
 // ========================
 // ➕ ADD TO PORTFOLIO (Track or Buy)
