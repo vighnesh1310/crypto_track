@@ -10,7 +10,6 @@ const axios = require('axios');
 router.get('/summary', verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    // ✅ lowercase for API
     const vs_currency = req.query.currency?.toLowerCase() || 'usd';
 
     const [portfolio, alerts, watchlist, sellTransactions] = await Promise.all([
@@ -20,7 +19,25 @@ router.get('/summary', verifyToken, async (req, res) => {
       Transaction.find({ user: userId, type: 'sell' })
     ]);
 
-    const realizedProfit = sellTransactions.reduce((sum, t) => sum + (t.realizedProfit || 0), 0);
+    // 🔹 Conversion rate for all USD-stored values
+    let conversionRate = 1;
+    if (vs_currency !== 'usd') {
+      try {
+        const rateRes = await axios.get(
+          `https://min-api.cryptocompare.com/data/price`,
+          { params: { fsym: 'USD', tsyms: vs_currency.toUpperCase() } }
+        );
+        conversionRate = rateRes.data?.[vs_currency.toUpperCase()] || 1;
+      } catch (err) {
+        console.error("Conversion Rate Error:", err.message);
+      }
+    }
+
+    // 🔹 Convert realized profit to requested currency
+    const realizedProfit = sellTransactions.reduce(
+      (sum, t) => sum + (t.realizedProfit || 0),
+      0
+    ) * conversionRate;
 
     if (!portfolio || !portfolio.holdings || portfolio.holdings.length === 0) {
       return res.json({
@@ -47,7 +64,7 @@ router.get('/summary', verifyToken, async (req, res) => {
         priceData = priceRes.data?.RAW || {};
       } catch (err) {
         console.error("Price API Error:", err.message);
-        priceData = {}; // fallback so app doesn't crash
+        priceData = {};
       }
     }
 
@@ -57,9 +74,10 @@ router.get('/summary', verifyToken, async (req, res) => {
     for (const h of buyHoldings) {
       const symbol = h.symbol?.toUpperCase();
       const quantity = h.quantity || 0;
-      const avgPrice = h.averageBuyPrice || 0;
 
-      // ✅ safe lookup for missing price
+      // 🔹 Convert avg buy price (stored in USD) to requested currency
+      const avgPrice = (h.averageBuyPrice || 0) * conversionRate;
+
       const price = priceData[symbol]?.[vs_currency.toUpperCase()]?.PRICE || 0;
 
       totalValue += quantity * price;
@@ -69,10 +87,8 @@ router.get('/summary', verifyToken, async (req, res) => {
     const unrealizedProfit = totalValue - totalInvestment;
     const totalProfit = unrealizedProfit + realizedProfit;
 
-    // ✅ formula untouched
-    const totalProfitPercent = totalInvestment > 0
-      ? (totalProfit / totalInvestment) * 100
-      : 0;
+    const totalProfitPercent =
+      totalInvestment > 0 ? (totalProfit / totalInvestment) * 100 : 0;
 
     res.json({
       totalValue,
