@@ -195,17 +195,31 @@ router.post('/update', auth, async (req, res) => {
 });
 
 // ========================
-// 📄 GET TRANSACTIONS
+// 📊 GET TRANSACTIONS
 // ========================
 router.get('/transactions', auth, async (req, res) => {
   try {
-    const transactions = await Transaction.find({ user: req.user.id }).sort({ date: -1 });
-    res.json(transactions);
+    const { currency = 'USD' } = req.query;  // default USD
+    const transactions = await Transaction.find({ user: req.user.id });
+
+    // 🔹 fetch conversion rate (USD -> selected currency)
+    const rateRes = await axios.get(
+      `https://min-api.cryptocompare.com/data/price?fsym=USD&tsyms=${currency}`
+    );
+    const rate = rateRes.data[currency];
+
+    // 🔹 map transactions with converted price
+    const converted = transactions.map(tx => ({
+      ...tx._doc,
+      price: tx.price * rate,  // convert USD -> selected currency
+    }));
+
+    res.json(converted);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch transactions' });
+    console.error("Error fetching transactions:", err.message);
+    res.status(500).json({ error: "Failed to fetch transactions" });
   }
 });
-
 // ========================
 // 📈 PORTFOLIO VALUE HISTORY
 // ========================
