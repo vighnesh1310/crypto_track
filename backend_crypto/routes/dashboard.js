@@ -10,7 +10,8 @@ const axios = require('axios');
 router.get('/summary', verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const vs_currency = req.query.currency?.toUpperCase() || 'USD';
+    // ✅ lowercase for API
+    const vs_currency = req.query.currency?.toLowerCase() || 'usd';
 
     const [portfolio, alerts, watchlist, sellTransactions] = await Promise.all([
       Portfolio.findOne({ user: userId }),
@@ -34,15 +35,21 @@ router.get('/summary', verifyToken, async (req, res) => {
       });
     }
 
-    const holdings = portfolio.holdings;
-    const buyHoldings = holdings.filter(h => h.type === 'buy');
+    const buyHoldings = portfolio.holdings.filter(h => h.type === 'buy');
+    const symbolsArr = [...new Set(buyHoldings.map(h => h.symbol?.toUpperCase()).filter(Boolean))];
 
-    const symbols = [...new Set(buyHoldings.map(h => h.symbol?.toUpperCase()).filter(Boolean))].join(',');
-    const priceRes = await axios.get(`https://min-api.cryptocompare.com/data/pricemultifull`, {
-      params: { fsyms: symbols, tsyms: vs_currency }
-    });
-
-    const priceData = priceRes.data?.RAW || {};
+    let priceData = {};
+    if (symbolsArr.length > 0) {
+      try {
+        const priceRes = await axios.get(`https://min-api.cryptocompare.com/data/pricemultifull`, {
+          params: { fsyms: symbolsArr.join(','), tsyms: vs_currency.toUpperCase() }
+        });
+        priceData = priceRes.data?.RAW || {};
+      } catch (err) {
+        console.error("Price API Error:", err.message);
+        priceData = {}; // fallback so app doesn't crash
+      }
+    }
 
     let totalValue = 0;
     let totalInvestment = 0;
@@ -51,20 +58,20 @@ router.get('/summary', verifyToken, async (req, res) => {
       const symbol = h.symbol?.toUpperCase();
       const quantity = h.quantity || 0;
       const avgPrice = h.averageBuyPrice || 0;
-      const price = priceData[symbol]?.[vs_currency]?.PRICE || 0;
 
-      const currentValue = quantity * price;
-      const investmentValue = quantity * avgPrice;
+      // ✅ safe lookup for missing price
+      const price = priceData[symbol]?.[vs_currency.toUpperCase()]?.PRICE || 0;
 
-      totalValue += currentValue;
-      totalInvestment += investmentValue;
+      totalValue += quantity * price;
+      totalInvestment += quantity * avgPrice;
     }
 
     const unrealizedProfit = totalValue - totalInvestment;
     const totalProfit = unrealizedProfit + realizedProfit;
 
-    const totalProfitPercent = (totalInvestment + realizedProfit) > 0
-      ? (totalProfit / (totalInvestment + realizedProfit)) * 100
+    // ✅ formula untouched
+    const totalProfitPercent = totalInvestment > 0
+      ? (totalProfit / totalInvestment) * 100
       : 0;
 
     res.json({

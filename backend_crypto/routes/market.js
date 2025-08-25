@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
     const topCoinsRes = await axios.get(
       'https://min-api.cryptocompare.com/data/top/mktcapfull',
       {
-        params: { limit: 25, tsym: vs_currency },
+        params: { limit: 50, tsym: vs_currency },
         headers: { authorization: `Apikey ${API_KEY}` }
       }
     );

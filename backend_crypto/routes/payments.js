@@ -1,26 +1,44 @@
-const express = require('express');
+const express = require("express");
+const axios = require("axios");
 const router = express.Router();
 
-// Mock POST /api/payments/create-charge
-router.post('/create-charge', (req, res) => {
-  const { name, description, amount, currency } = req.body;
+const BTCPAY_URL = process.env.BTCPAY_URL;        // e.g. https://btcpay.yourdomain.com
+const BTCPAY_API_KEY = process.env.BTCPAY_API_KEY; // Testnet API key
+const BTCPAY_STORE_ID = process.env.BTCPAY_STORE_ID; // Your testnet store ID
 
-  console.log("💡 Mock Payment Request:", { name, description, amount, currency });
+// POST /api/payments/create-invoice
+router.post("/create-invoice", async (req, res) => {
+  try {
+    const { name, description, amount, currency } = req.body;
 
-  // Simulated response structure from Coinbase
-  res.json({
-    data: {
-      id: "mock_charge_12345",
-      hosted_url: "http://localhost:3000/payment-success",
-      pricing: {
-        local: {
-          amount,
-          currency
-        }
+    const response = await axios.post(
+      `${BTCPAY_URL}/api/v1/stores/${BTCPAY_STORE_ID}/invoices`,
+      {
+        amount,
+        currency, // e.g. "USD"
+        metadata: {
+          orderId: Date.now().toString(),
+          itemDesc: description,
+          product: name,
+        },
+        checkout: {
+          redirectURL: "http://localhost:3000/payment-success",
+          redirectAutomatically: true,
+        },
       },
-      status: "pending"
-    }
-  });
+      {
+        headers: {
+          Authorization: `token ${BTCPAY_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    res.json(response.data);
+  } catch (err) {
+    console.error("BTCPay error:", err.response?.data || err.message);
+    res.status(500).json({ error: "Invoice creation failed" });
+  }
 });
 
 module.exports = router;
