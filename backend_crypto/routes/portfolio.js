@@ -19,10 +19,7 @@ router.get('/', auth, async (req, res) => {
     // ✅ Default: show only BUY holdings
     if (type) {
       holdings = holdings.filter((h) => h.type === type);
-    } else {
-      holdings = holdings.filter((h) => h.type === 'buy');
     }
-
     if (holdings.length === 0) return res.json([]);
 
     const symbols = holdings.map(h => h.symbol.toUpperCase()).join(',');
