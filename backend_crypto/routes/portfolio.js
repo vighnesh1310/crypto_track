@@ -16,14 +16,15 @@ router.get('/', auth, async (req, res) => {
     const portfolio = await Portfolio.findOne({ user: req.user.id });
     let holdings = portfolio?.holdings || [];
 
-    // ✅ Default: show only BUY holdings
     if (type) {
       holdings = holdings.filter((h) => h.type === type);
     }
+
     if (holdings.length === 0) return res.json([]);
 
     const symbols = holdings.map(h => h.symbol.toUpperCase()).join(',');
     const url = `https://min-api.cryptocompare.com/data/pricemultifull?fsyms=${symbols}&tsyms=${vs_currency}`;
+
     const priceRes = await axios.get(url);
     const priceData = priceRes.data.RAW;
 
@@ -48,6 +49,7 @@ router.get('/', auth, async (req, res) => {
     res.status(500).json({ error: 'Server error while fetching portfolio.' });
   }
 });
+
 
 
 // ========================
