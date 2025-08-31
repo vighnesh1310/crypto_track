@@ -56,7 +56,7 @@ router.get('/', auth, async (req, res) => {
 // ========================
 // ➕ ADD TO PORTFOLIO (Track or Buy)
 // ========================
-router.post('/portfolio', auth, async (req, res) => {
+router.post('/', auth, async (req, res) => {
   const { coinId, symbol, amount, type = 'track', image, name, current_price } = req.body;
 
   if (!coinId || !symbol || !amount) {
