@@ -22,15 +22,25 @@ This project demonstrates full-stack development skills, including API integrati
 ✨ Features
 
 🔐 Authentication
+
+
 User Registration & Login (JWT-based)
+
 Protected routes
+
 Remember Me option
+
 Profile management (update password, avatar, delete account)
 
+
 📊 Dashboard
+
 Real-time crypto price tracking
+
 Trending coins section
+
 Search, filter, and pagination
+
 Dark mode support 🌙
 
 💼 Portfolio Management
