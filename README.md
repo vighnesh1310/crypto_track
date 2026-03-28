@@ -6,7 +6,7 @@ It is designed with a focus on user-friendly UI, real-time data visualization, a
 
 🌐 Live Demo
 
-👉 Add your deployed link here (Vercel / Netlify / Render)
+👉 https://crypto-track-xi.vercel.app/
 
 📌 Project Overview
 
