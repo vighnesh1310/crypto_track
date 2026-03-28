@@ -51,7 +51,7 @@ Export data to PDF / Excel
 
 The dashboard provides a quick overview of the market with live prices and trending coins. It helps users quickly analyze market conditions.
 
-<p align="center"> <img src="./screenshots/dashboard.png" width="800"/> </p>
+<p align="center"> <img src="./screenshots/Screenshot 2025-11-13 155513.png" width="800"/> </p>
 💼 Portfolio – Investment Tracking & Analytics
 
 This section allows users to manage their investments and analyze performance using charts.
