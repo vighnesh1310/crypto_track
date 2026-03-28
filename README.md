@@ -20,16 +20,19 @@ Monitor selected coins using watchlist & alerts
 This project demonstrates full-stack development skills, including API integration, authentication, and data visualization.
 
 ✨ Features
+
 🔐 Authentication
 User Registration & Login (JWT-based)
 Protected routes
 Remember Me option
 Profile management (update password, avatar, delete account)
+
 📊 Dashboard
 Real-time crypto price tracking
 Trending coins section
 Search, filter, and pagination
 Dark mode support 🌙
+
 💼 Portfolio Management
 Add, edit, delete holdings
 Automatic profit/loss calculation
@@ -37,16 +40,20 @@ Visual analytics:
 Pie Chart (portfolio distribution)
 Line Chart (performance trend)
 Bar Chart (coin comparison)
+
 ⭐ Watchlist & Alerts
 Add/remove coins to watchlist
 Set price alerts
 Toast notification system
+
 📈 Market Page
 Live crypto data using CoinGecko API
 Sorting and filtering options
 Sparkline mini charts
 Export data to PDF / Excel
+
 📸 Screenshots
+
 🏠 Dashboard – Real-Time Crypto Overview
 
 The dashboard provides a quick overview of the market with live prices and trending coins. It helps users quickly analyze market conditions.
@@ -85,4 +92,4 @@ Express.js
 MongoDB (Mongoose)
 JWT Authentication
 API
-CoinGecko API
+CoinGecko API & Cryptocompare
