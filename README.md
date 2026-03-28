@@ -61,7 +61,7 @@ Key features:
 Profit/Loss tracking
 Pie chart for distribution
 Line chart for trends
-<p align="center"> <img src="./screenshots/portfolio.png" width="800"/> </p>
+<p align="center"> <img src="./screenshots/Screenshot 2025-11-13 155551.png" width="800"/> </p>
 📊 Market Page – Detailed Crypto Data
 
 Displays a list of cryptocurrencies with filtering, sorting, and trend visualization.
