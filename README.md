@@ -71,12 +71,8 @@ Key features:
 Live data
 Sparkline charts
 Export options
-<p align="center"> <img src="./screenshots/market.png" width="800"/> </p>
-⭐ Watchlist – Personalized Tracking
+<p align="center"> <img src="./screenshots/Screenshot 2025-11-13 155441.png" width="800"/> </p>
 
-Users can track selected coins and monitor their price changes.
-
-<p align="center"> <img src="./screenshots/watchlist.png" width="800"/> </p>
 🛠️ Tech Stack
 Frontend
 React.js
