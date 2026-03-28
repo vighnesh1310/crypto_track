@@ -44,22 +44,36 @@ Search, filter, and pagination
 Dark mode support 🌙
 
 💼 Portfolio Management
+
 Add, edit, delete holdings
+
 Automatic profit/loss calculation
+
 Visual analytics:
+
 Pie Chart (portfolio distribution)
+
 Line Chart (performance trend)
+
 Bar Chart (coin comparison)
 
+
 ⭐ Watchlist & Alerts
+
 Add/remove coins to watchlist
+
 Set price alerts
+
 Toast notification system
 
+
 📈 Market Page
-Live crypto data using CoinGecko API
+Live crypto data using CoinGecko API & cryptocompare API
+
 Sorting and filtering options
+
 Sparkline mini charts
+
 Export data to PDF / Excel
 
 📸 Screenshots
@@ -91,15 +105,27 @@ Export options
 <p align="center"> <img src="./screenshots/Screenshot 2025-11-13 155441.png" width="800"/> </p>
 
 🛠️ Tech Stack
+
 Frontend
+
 React.js
+
 Tailwind CSS
+
 Axios
+
 Chart.js / Recharts
+
 Backend
+
 Node.js
+
 Express.js
+
 MongoDB (Mongoose)
+
 JWT Authentication
+
 API
+
 CoinGecko API & Cryptocompare
